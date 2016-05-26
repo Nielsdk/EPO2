@@ -48,7 +48,7 @@ begin
 		case state_reg is
 			when idle => 
 				override_next <= translator_input_reg;
-				if(unsigned(timebase) =  1000000) then
+				if(unsigned(timebase) =  999996) then
 					state_next <= update;
 				end if;
 			when update =>
