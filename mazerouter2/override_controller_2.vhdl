@@ -41,21 +41,20 @@ begin
 	end if;
 end process;
 
-process (clk, translator_out)
+process (clk, translator_out, sensor_l, sensor_m, sensor_r)
+
 begin
-
-
-
-pwm_count_reset <= '0'; 
 
 case override_cont_state is
 
 override_vector <= "0000"; -- moet iets zijn
+
 		when read_sensor_and_listen => 
 			reset_translater_out <= '0';
 			
 			if(sensor_l = '0' and sensor_m = '0' and sensor_r =  '0' and  distance = '1') then -- neem de lijnvolger over. 
 				override <= '1';
+				pwm_count_reset <= '0' -- Hij komt in de override stand en mag beginnen met tellen van het aantal pwm perioden.
 				case translator_out is --Afhankelijk van het ingekomen signaal van C wordt er hier gekozen uit de juiste bocht.
 					when "10000001" => override_cont_new_state <= forward;
 					when "10000010" => override_cont_new_state <= right;
@@ -69,6 +68,7 @@ override_vector <= "0000"; -- moet iets zijn
 					when others => override_cont_new_state <= read_sensor_and_listen;
 				end case;
 			else
+				pwm_count_reset <= '1'; --pwm_count is een counter die telt per 20 ms. Zo is het aantal pwm pulsen te tellen.
 				override <= '0';
 				override_cont_new_state <= read_sensor_and_listen;
 			end if;
@@ -108,7 +108,7 @@ override_vector <= "0000"; -- moet iets zijn
 			
 		when backward =>
 
-			if(unsigned(pwm_count_out) < 10) then
+			if(unsigned(pwm_count_out) < 50) then
 				override_vector <= "0100";
 				override_cont_new_state <= backward;
 			else
@@ -118,14 +118,13 @@ override_vector <= "0000"; -- moet iets zijn
 
 		when stop =>
 
-			if(unsigned(pwm_count_out) < 10) then
+			if(unsigned(pwm_count_out) < 50) then
 				override_vector <= "0000";
 				pwm_count_reset <= '0'; 
 				override_cont_new_state <= stop;
 			else
 				override_cont_new_state <= read_sensor_and_listen;
 				reset_translater_out <= '1';
-				pwm_count_reset <= '1'; 
 			end if;			
 			
 		when others => 
@@ -136,7 +135,7 @@ end case;
 end process;
 
 
-process(clk)
+process(count_reset)
 begin
 	if (rising_edge(count_reset)) then
 		if(pwm_count_reset = '1') then
