@@ -45,7 +45,7 @@ process (clk, translator_out)
 begin
 
 
---override <= '0'; -- standaard override, tenzij hij in de read_sensor_and_listen staat is
+
 pwm_count_reset <= '0'; 
 
 case override_cont_state is
