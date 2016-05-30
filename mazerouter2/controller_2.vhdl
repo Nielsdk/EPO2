@@ -107,8 +107,8 @@ begin
 		when drive_motor_right => 
 			motor_r_direction <= '0';
 			motor_l_direction <= '1';
-			motor_r_speed <= '1';
-			motor_l_speed <= '0';
+			motor_r_speed <= '0';
+			motor_l_speed <= '1';
 			motor_r_reset <= '0';
 			motor_l_reset <= '0';
 
@@ -127,8 +127,8 @@ begin
 		when drive_motor_left => 
 			motor_r_direction <= '0';
 			motor_l_direction <= '1';
-			motor_r_speed <= '0';
-			motor_l_speed <= '1';
+			motor_r_speed <= '1';
+			motor_l_speed <= '0';
 			motor_r_reset <= '0';
 			motor_l_reset <= '0';
 
