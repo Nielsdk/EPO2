@@ -24,7 +24,7 @@ signal count, new_count : unsigned (19 downto 0);
 begin
 	--This process generates the register
 
-process(clk)
+process(clk, reset) -- Heeft een asynchrone reset gekregen. (bedoeling?)
 begin
 	if(reset = '1') then
 			count <= (others => '0');

@@ -36,11 +36,10 @@ architecture behavioural of controller is
 	signal state, new_state : controller_state;
 	signal sensor : std_logic_vector(2 downto 0);
 
-	signal distance : std_logic;
 begin
-	sensor(0) <= sensor_l;
+	sensor(0) <= sensor_r;
 	sensor(1) <= sensor_m;
-	sensor(2) <= sensor_r;
+	sensor(2) <= sensor_l;
 
 	process (clk)
 begin

@@ -40,9 +40,9 @@ BEGIN
 	TL_motor_r => motor_r
 	);
 
-	S00 : sensor_l <= '1'; -- Sensoren niet interessant
-	S01 : sensor_r <= '0'; -- Sensoren niet interessant
-	S02 : sensor_m <= '1'; -- Sensoren niet interessant
+	S00 : sensor_l <= '1' after 0 ns, '0' after 50 ms, '1' after 80 ms, '0' after 90 ms, '1' after 120 ms; 
+	S01 : sensor_r <= '1' after 0 ns, '0' after 50 ms, '1' after 80 ms, '0' after 90 ms, '0' after 120 ms;
+	S02 : sensor_m <= '0' after 0 ns, '0' after 50 ms, '1' after 80 ms, '0' after 90 ms, '1' after 120 ms; 
 
 	S03 : clk <= '1' AFTER 0 ns, 
 		'0' AFTER 10 ns WHEN clk /= '0' ELSE '1' AFTER 10 ns;
@@ -50,18 +50,32 @@ BEGIN
 	S04 : reset <= '1' AFTER 0 ns, 
 		'0' AFTER 100 ns;
 
-	S05 : rx <= '1' AFTER 0 ns, 
+	S05 : rx <= 
+		'1' AFTER 0 ns, -- SEND LEFT: 10000100
 		'1' AFTER 50 ns, -- IDLE
 		'0' AFTER 104317 ns, -- Start bit
-		'1' AFTER 208584 ns, -- LSB
+		'0' AFTER 208584 ns, -- LSB
 		'0' AFTER 312851 ns, 
-		'0' AFTER 417118 ns, 
+		'1' AFTER 417118 ns, 
 		'0' AFTER 521385 ns, 
 		'0' AFTER 625652 ns, 
 		'0' AFTER 729919 ns, 
 		'0' AFTER 834186 ns, 
-		'0' AFTER 938453 ns, -- MSB
-		'1' AFTER 1042720 ns; -- Stop bit 
+		'1' AFTER 938453 ns, -- MSB
+		'1' AFTER 1042720 ns, -- Stop bit
+		
+		'1' AFTER 100000000 ns, -- start sending at 100 ms: right, 10000010
+		'1' AFTER 100000050 ns, -- IDLE
+		'0' AFTER 100104317 ns, -- Start bit
+		'0' AFTER 100208584 ns, -- LSB
+		'1' AFTER 100312851 ns, 
+		'0' AFTER 100417118 ns, 
+		'0' AFTER 100521385 ns, 
+		'0' AFTER 100625652 ns, 
+		'0' AFTER 100729919 ns, 
+		'0' AFTER 100834186 ns, 
+		'1' AFTER 100938453 ns, -- MSB
+		'1' AFTER 101042720 ns; -- Stop bit 
 
 END ARCHITECTURE systeem_tb;
 

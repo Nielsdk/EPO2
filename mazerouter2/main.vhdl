@@ -54,7 +54,7 @@ ARCHITECTURE structural OF systeem IS
 	translator_out : in std_logic_vector(7 downto 0);
 	override_vector : out std_logic_vector(3 downto 0);
 	override : out std_logic;
-	reset_translator_out : out std_logic;
+	translator_out_reset : out std_logic;
 	count_reset : in std_logic;
 	sensor_l           : in std_logic;
 	sensor_m           : in std_logic;
@@ -232,7 +232,7 @@ BEGIN
 	reset => TL_reset, 
 --	timebase => TL_count, 
 	translator_out => TL_translator_out, 
-	reset_translator_out => TL_translator_out_reset, 
+	translator_out_reset => TL_translator_out_reset, 
 	override => TL_override, 
 	override_vector => TL_override_vector,
 	sensor_l => TL_sensor_l_buff, 

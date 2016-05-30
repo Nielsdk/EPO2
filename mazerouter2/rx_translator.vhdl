@@ -45,8 +45,12 @@ begin
 			receiver_in_reg <= (others=>'0');
 			translator_reg <= (others=>'0');
 			flag_reg <= '1';
-		elsif(translator_out_reset = '1' and rising_edge(clk)) then
+		elsif(translator_out_reset = '1') then --  and rising_edge(clk)
 		        state_reg <= reset_output;
+			receiver_check_reg <= receiver_check_next;
+			receiver_in_reg <= receiver_in_next;
+			translator_reg <= translator_next;
+			flag_reg <= flag_next;
 		elsif(rising_edge(clk)) then
 			state_reg <= state_next;
 			receiver_check_reg <= receiver_check_next;
