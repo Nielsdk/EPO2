@@ -37,7 +37,7 @@ architecture bh of rx_translator is
 	signal state_reg, state_next : state_type;
 	signal flag_reg, flag_next : std_logic;
 begin
-	process(clk, reset)
+	process(clk, reset, translator_out_reset, receiver_check_next, receiver_in_next, translator_next, flag_next)
 	begin
 		if(reset='1') then
 			state_reg <= idle;
@@ -60,7 +60,7 @@ begin
 		end if;
 	end process;
 
-	process(flag_reg, state_reg, receiver_check_reg, translator_reg, flag_in, clk)
+	process(flag_reg, state_reg, receiver_check_reg, translator_reg, flag_in, clk, receiver_in_reg, receiver_in)
 	begin
 		state_next <= state_reg;
 		receiver_check_next <= receiver_check_reg;

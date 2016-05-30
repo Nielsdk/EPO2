@@ -32,7 +32,7 @@ end entity controller;
 architecture behavioural of controller is
 
 	type controller_state is (read_sensor, drive_motor_forward, drive_motor_fastleft, drive_motor_left, 
-	drive_motor_fastright, drive_motor_right, drive_motor_left90, drive_motor_right90, drive_motor_backward);
+	drive_motor_fastright, drive_motor_right, drive_motor_left90, drive_motor_right90, drive_motor_backward, stop_motor);
 	signal state, new_state : controller_state;
 	signal sensor : std_logic_vector(2 downto 0);
 
@@ -44,7 +44,7 @@ begin
 	process (clk)
 begin
 	if (rising_edge(clk)) then
-		if (reset = '1' or unsigned(count_in) = 999999) then
+		if (reset = '1' or unsigned(count_in) = 999998) then
 			state <= read_sensor;
 			count_reset <= '1';
 		else
@@ -88,7 +88,7 @@ begin
 					when "0110" => new_state <= drive_motor_fastleft;
 					when "0111" => new_state <= drive_motor_left90;
 					when "1000" => new_state <= drive_motor_backward;
-					when "0000" => new_state <= read_sensor;
+					when "0000" => new_state <= stop_motor;
 					when others => new_state <= read_sensor;
 					
 				end case;
@@ -174,8 +174,15 @@ begin
 			motor_l_reset <= '0';
 			motor_l_direction <= '0';
 			motor_r_direction <= '1';
+		when stop_motor =>
+			motor_r_speed <= '1';
+			motor_l_speed <= '1';
+			motor_r_reset <= '1';
+			motor_l_reset <= '1';
+			motor_l_direction <= '0';
+			motor_r_direction <= '1';
 
-			new_state <= drive_motor_backward;
+			new_state <= stop_motor;
 	end case;
 end process;
 
