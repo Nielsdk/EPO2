@@ -24,6 +24,7 @@ entity controller is
 		motor_r_reset      : out std_logic;
 		motor_r_direction  : out std_logic;
 		motor_r_speed      : out std_logic
+	
 	);
 
 end entity controller;
@@ -36,17 +37,14 @@ architecture behavioural of controller is
 	signal sensor : std_logic_vector(2 downto 0);
 
 begin
-	sensor(0) <= sensor_l;
+	sensor(0) <= sensor_r;
 	sensor(1) <= sensor_m;
-	sensor(2) <= sensor_r;
+	sensor(2) <= sensor_l;
 
 	process (clk)
 begin
-	if (reset = '1') then
-		state <= read_sensor;
-		count_reset <= '1';
-	elsif (rising_edge(clk)) then
-		if (unsigned(count_in) = "11110100001001000000") then
+	if (rising_edge(clk)) then
+		if (reset = '1' or unsigned(count_in) = 999999) then
 			state <= read_sensor;
 			count_reset <= '1';
 		else
@@ -56,7 +54,7 @@ begin
 	end if;
 end process;
 
-process (state, count_in, sensor, override, override_vector, clk)
+process (state, count_in, sensor, override, override_vector)
 begin
 	new_state <= state;
 	case state is
@@ -180,5 +178,7 @@ begin
 			new_state <= drive_motor_backward;
 	end case;
 end process;
+
+
 
 end architecture behavioural;
