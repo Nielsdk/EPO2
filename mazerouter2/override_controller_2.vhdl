@@ -24,7 +24,7 @@ architecture behavioural of override_controller is
 	read_sensor_and_listen, 
 	forward, backward, stop, right90, right, fastright, left90, left, fastleft, forward_station, left_station, right_station);
 
-	type station_state_type is (first, second, third);
+	type station_state_type is (first, second, third, fourth);
 	signal station_state, new_station_state : station_state_type;
 	
 	signal override_cont_state, override_cont_new_state : override_controller_states;
@@ -77,8 +77,8 @@ begin
 					when "10000100" => override_cont_new_state <= left;
 					when "10001000" => override_cont_new_state <= backward;
 					when "11000001" => override_cont_new_state <= forward_station;
-					when "11000010" => override_cont_new_state <= right_station;
-					when "11000100" => override_cont_new_state <= left_station;
+					when "11000010" => override_cont_new_state <= LEFT_STATION; ----------------OMGEDRAAID MET LEFT_STATION!!!!!!!!!
+					when "11000100" => override_cont_new_state <= RIGHT_STATION;
 												
 					when others => override_cont_new_state <= read_sensor_and_listen; -- pwm_count_reset <= '0';
 				end case;
@@ -203,7 +203,7 @@ begin
 				translator_out_reset <= '1';
 			end if;
 			
-		when left_station => -- VOORBEELD VOOR FORWARD_STATION COMMANDO.
+		when left_station => -- VOORBEELD VOOR FORWARD_STATION COMMANDO.   
 			pwm_count_reset <= '0';
 			override_vector <= "1000"; -- moet iets zijn
 			translator_out_reset <= '0';
@@ -237,25 +237,72 @@ begin
 					override_cont_new_state <= read_sensor_and_listen;
 					translator_out_reset <= '1';
 					new_station_state <= first;
+				
+				when others => -- zelfde als Third
+					long_pwm_count_reset <= '0';
+					pwm_count_reset <= '1';
+					override <= '0';
+					override_cont_new_state <= read_sensor_and_listen;
+					translator_out_reset <= '1';
+					new_station_state <= first;
 				end case;
 					
 
 		when right_station => 
 		
-			if (unsigned(pwm_count_out) < 50) then
-				pwm_count_reset <= '0';
-				override <= '1';
-				override_vector <= "1000";
-				override_cont_new_state <= backward;
-				translator_out_reset <= '0';
-			else
-				long_pwm_count_reset <= '1';
-				pwm_count_reset <= '1';
-				override <= '0';
-				override_vector <= "0000";-- moet iets zijn
-				override_cont_new_state <= read_sensor_and_listen;
-				translator_out_reset <= '1';
-			end if;
+			pwm_count_reset <= '0';
+			override_vector <= "1000"; -- moet iets zijn
+			translator_out_reset <= '0';
+			override_cont_new_state <= right_station;
+			
+			case station_state is
+			
+				when first => 	-- bocht naar rechts
+				
+					if (unsigned(pwm_count_out) < 4) then
+						pwm_count_reset <= '0';
+						override <= '1';
+						override_vector <= "0100";
+						override_cont_new_state <= right_station;
+						translator_out_reset <= '0';
+						new_station_state <= first;
+					else
+						long_pwm_count_reset <= '1';
+						pwm_count_reset <= '0'; --LET OP! Is dit de bedoeling?
+						override <= '0';
+						override_vector <= "0000";-- moet iets zijn
+						override_cont_new_state <= right_station;
+						translator_out_reset <= '0';
+						new_station_state <= second;
+					end if;		
+				
+				
+				when second =>
+					override <= '0';
+					if(sensor_l = '0' or sensor_m = '0' or sensor_r = '0') then --lijnvolgen zolang in ieder geval 1 van de sensoren een lijn ziet. Zo rijd hij tot het einde van de lijn (waar ze alle drie wit (='1') worden)
+						new_station_state <= second;
+					else
+						new_station_state <= third;
+					end if;
+					
+				when third => --Bocht maken als hij aan het einde van de lijn is. Dan geldt: sensor_l ='1' (wit).  Dan  180 graden RECHTSOM draaien. De linker sensor zal als laatste weer zwart worden. Dan verder naar de volgende stap.
+					override <= '1';
+					override_vector <= "0100"; -- drive_motor_fastright.
+					
+					if(sensor_l = '1') then
+						new_station_state <= third;
+					else
+						new_station_state <= fourth;
+					end if;
+				
+				when fourth =>
+					long_pwm_count_reset <= '0'; -- De robot is klaar om weer lijn te volgen, hij verlaat de override stand. Hij moet hier weer een signaal sturen naar de pc dat hij het volgende commando wil.
+					pwm_count_reset <= '1';
+					override <= '0';
+					override_cont_new_state <= read_sensor_and_listen;
+					translator_out_reset <= '1';
+					new_station_state <= first;
+				end case;
  
 		when others => 
 			long_pwm_count_reset <= '0';
