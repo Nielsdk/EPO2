@@ -278,5 +278,5 @@ end process;
 
 pwm_count_out <= std_logic_vector(pwm_count);
 
-end architecture behavioural
+end architecture behavioural;
 
