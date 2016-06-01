@@ -13,7 +13,10 @@ entity override_controller is
 		count_reset           : in std_logic;
 		sensor_l              : in std_logic;
 		sensor_m              : in std_logic;
-		sensor_r              : in std_logic
+		sensor_r              : in std_logic;
+		--==========
+		tx_out, tx_send_out   : out std_logic
+		--==========
 	);
 
 end entity override_controller;
@@ -24,6 +27,8 @@ architecture behavioural of override_controller is
 	read_sensor_and_listen, 
 	forward, backward, stop, right90, right, fastright, left90, left, fastleft, forward_station, left_station, right_station);
 
+	constant override_take_me_over : integer := 2;
+
 	type station_state_type is (first, second, third, fourth);
 	signal station_state, new_station_state : station_state_type;
  
@@ -31,6 +36,11 @@ architecture behavioural of override_controller is
 	signal pwm_count, new_pwm_count, distance_count, new_distance_count : unsigned (19 downto 0);
 	signal pwm_count_out : std_logic_vector (19 downto 0);
 	signal pwm_count_reset, distance_count_reset : std_logic;
+
+	--================
+	type tx_state is (tx_idle, tx_wait, tx_send);
+	signal tx_state_reg, tx_state_next : tx_state;
+	--================
  
 begin
 	process (clk, reset)
@@ -52,22 +62,21 @@ begin
 	--pwm_count_reset <= '1';
 	--translator_out_reset <= '0';
 	--override_vector <= "0000";-- moet iets zijn
-	new_station_state <= station_state;
+	new_station_state <= station_state; 
  
 	
 	case override_cont_state is
-
 		when read_sensor_and_listen => 
-			translator_out_reset <= '0';
+			translator_out_reset <= '0'; -- Houdt de uitgang op de translator out
 			override_vector <= "0000"; -- Stel hij override de controller hier, dan zet hij de robot stil.
-			new_station_state <= first;
-			distance_count_reset <= '0';
+			new_station_state <= first; -- Eerste staat in de station FSM
+			distance_count_reset <= '0'; -- De distance telt gewoon door
 
-			if (sensor_l = '0' and sensor_m = '0' and sensor_r = '0' and distance_count > 2 ) then -- neem de lijnvolger over. DISTANCE MOET TOEGEVOEGD WORDEN.
+			if (sensor_l = '0' and sensor_m = '0' and sensor_r = '0' and distance_count > override_take_me_over ) then -- neem de lijnvolger over. DISTANCE MOET TOEGEVOEGD WORDEN.
 				override <= '1';
-				pwm_count_reset <= '1'; -- Hij komt in de override stand en mag beginnen met tellen van het aantal pwm perioden.
+				pwm_count_reset <= '1'; -- Hij komt in de override stand en mag beginnen met tellen van het aantal pwm perioden. Deze teller is voor de bochten.
  
-				case translator_out is --Afhankelijk van het ingekomen signaal van C wordt er hier gekozen uit de juiste bocht.
+				case translator_out is -- Afhankelijk van het ingekomen signaal van C wordt er hier gekozen uit de juiste bocht.
 					when "10000000" => override_cont_new_state <= stop; 
 					when "10000001" => override_cont_new_state <= forward;
 					when "10000010" => override_cont_new_state <= right;
@@ -80,7 +89,7 @@ begin
 				end case;
 			else
 				override <= '0';
-				pwm_count_reset <= '0'; --pwm_count is een counter die telt per 20 ms. Zo is het aantal pwm pulsen te tellen.
+				pwm_count_reset <= '0'; -- pwm_count is een counter die telt per 20 ms. Zo is het aantal pwm pulsen te tellen.
 				override_cont_new_state <= read_sensor_and_listen;
 			end if;
 
@@ -93,8 +102,8 @@ begin
 		when forward => --Een korte periode vooruit rijden en daarna weer over op lijnvolgen.
 			case station_state is
 				when first =>
-					distance_count_reset <= '0';
-					pwm_count_reset <= '0';
+					distance_count_reset <= '0'; -- Reset de beide tellers niet 
+					pwm_count_reset <= '0'; 
 					override <= '1';
 					override_vector <= "0001"; -- harde bocht naar links
 					override_cont_new_state <= forward;
@@ -286,7 +295,6 @@ begin
 			override_cont_new_state <= left_station;
  
 			case station_state is
- 
 				when first => -- Lijnvolgen
 					override <= '0';
  
@@ -421,6 +429,33 @@ begin
 	new_distance_count <= distance_count + 1;
 end process;
 ------------------------------------------------------------------------------------------------
+
+--=======================================
+-- tx signalen
+--=======================================
+process(clk, sensor_l, sensor_r, sensor_m, distance_count)
+begin
+	tx_state_next <= tx_state_reg;
+	tx_send_out <= '0';
+	case(tx_state_reg) is
+		when tx_idle =>
+			if(override_cont_state = forward_station OR override_cont_state = right_station OR override_cont_state = left_station) then
+				tx_state_next <= tx_send;
+			elsif(sensor_l = '0' and sensor_m = '0' and sensor_r = '0' and distance_count < override_take_me_over) then
+				tx_state_next <= tx_wait; 
+			end if;
+		when tx_wait =>
+			if (not(sensor_l = '0' and sensor_m = '0' and sensor_r = '0')) then
+				tx_state_next <= tx_send;
+			end if;
+		when tx_send =>
+			tx_out <= '0';
+			tx_send_out <= '1';	
+			if(not(override_cont_state = forward_station OR override_cont_state = right_station OR override_cont_state = left_station)) then
+				tx_state_next <= tx_idle;
+			end if;
+	end case;
+end process;
 
 
 end architecture behavioural;
