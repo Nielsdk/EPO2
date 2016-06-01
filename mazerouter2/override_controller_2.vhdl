@@ -26,16 +26,14 @@ architecture behavioural of override_controller is
 
 	type station_state_type is (first, second, third, fourth);
 	signal station_state, new_station_state : station_state_type;
-	
+ 
 	signal override_cont_state, override_cont_new_state : override_controller_states;
-	signal pwm_count, new_pwm_count, long_pwm_count, new_long_pwm_count : unsigned (19 downto 0);
+	signal pwm_count, new_pwm_count, distance_count, new_distance_count : unsigned (19 downto 0);
 	signal pwm_count_out : std_logic_vector (19 downto 0);
-	signal pwm_count_reset, long_pwm_count_reset : std_logic;
---	signal station_state : std_logic;
-	
+	signal pwm_count_reset, distance_count_reset : std_logic;
+ 
 begin
-
-process (clk, reset)
+	process (clk, reset)
 begin
 	if (rising_edge(clk)) then
 		if (reset = '1') then
@@ -48,30 +46,28 @@ begin
 	end if;
 end process;
 
-process (clk, translator_out, sensor_l, sensor_m, sensor_r, override_cont_state, pwm_count, long_pwm_count, pwm_count_out)
+process (clk, translator_out, sensor_l, sensor_m, sensor_r, override_cont_state, pwm_count, distance_count, pwm_count_out)
 
---variable station_state : integer := 0;
 begin
 	--pwm_count_reset <= '1';
 	--translator_out_reset <= '0';
- 	--override_vector <= "0000";-- moet iets zijn
+	--override_vector <= "0000";-- moet iets zijn
 	new_station_state <= station_state;
-	
-	long_pwm_count_reset <= '0';
+ 
+	distance_count_reset <= '0';
 	case override_cont_state is
 
 		when read_sensor_and_listen => 
 			translator_out_reset <= '0';
 			override_vector <= "0000";
 			new_station_state <= first;
- 
-			if (sensor_l = '0' and sensor_m = '0' and sensor_r = '0'  and long_pwm_count > 2 ) then -- neem de lijnvolger over. DISTANCE MOET TOEGEVOEGD WORDEN. or distance = '1'
+
+			if (sensor_l = '0' and sensor_m = '0' and sensor_r = '0' and distance_count > 2 ) then -- neem de lijnvolger over. DISTANCE MOET TOEGEVOEGD WORDEN. or distance = '1'
 				override <= '1';
 				pwm_count_reset <= '1'; -- Hij komt in de override stand en mag beginnen met tellen van het aantal pwm perioden.
-				
-				
+ 
 				case translator_out is --Afhankelijk van het ingekomen signaal van C wordt er hier gekozen uit de juiste bocht.
-					when "10000000" => override_cont_new_state <= stop;				
+					when "10000000" => override_cont_new_state <= stop; 
 					when "10000001" => override_cont_new_state <= forward;
 					when "10000010" => override_cont_new_state <= right;
 					when "10000100" => override_cont_new_state <= left;
@@ -79,23 +75,22 @@ begin
 					when "11000001" => override_cont_new_state <= forward_station;
 					when "11000010" => override_cont_new_state <= LEFT_STATION; ----------------OMGEDRAAID MET LEFT_STATION!!!!!!!!!
 					when "11000100" => override_cont_new_state <= RIGHT_STATION;
-												
-					when others => override_cont_new_state <= read_sensor_and_listen; -- pwm_count_reset <= '0';
+					when others => override_cont_new_state <= read_sensor_and_listen; 
 				end case;
 			else
 				override <= '0';
 				pwm_count_reset <= '0'; --pwm_count is een counter die telt per 20 ms. Zo is het aantal pwm pulsen te tellen.
 				override_cont_new_state <= read_sensor_and_listen;
 			end if;
+
+			----------------------------------------------------------------------------------------------------------------------
+			-- Dit zijn de staten voor de verschillende bochten: rechtdoor, links en rechts bij een kruising.
+			-- Er zijn ook staten voor een bocht naar een station, hier zal de staat ook de bocht aan het einde van de weg maken.
+			-- Aan het einde van de actie komt de override_controller weer in zijn read_sensor_and_listen staat.
+			----------------------------------------------------------------------------------------------------------------------
  
-		--------------------------------------------------------------------------------------------------------------
-		-- Dit zijn de staten voor de verschillende bochten: rechtdoor, links en rechts bij een kruising.			--
-		-- Elk zullen zij voor een bepaalde aansturingsstijd een bepaalde stuurrichting van de controller kiezen.	--
-		-- Pas als die tijd verstreken is kom de override_controller weer in zijn read_sensor_and_listen staat.		--
-		--------------------------------------------------------------------------------------------------------------
-		
-		when forward =>
- 
+		when forward => --Een korte periode vooruit rijden en daarna weer over op lijnvolgen.
+
 			if (unsigned(pwm_count_out) < 50) then
 
 				pwm_count_reset <= '0';
@@ -104,15 +99,15 @@ begin
 				override_cont_new_state <= forward;
 				translator_out_reset <= '0';
 			else
-				long_pwm_count_reset <= '1';
+				distance_count_reset <= '1';
 				pwm_count_reset <= '1';
 				override <= '0';
 				override_vector <= "0000";-- moet iets zijn
 				override_cont_new_state <= read_sensor_and_listen;
 				translator_out_reset <= '1';
 			end if;
- 
-		when left => 
+
+		when left => -- Voor een bepaalde tijd een bocht naar links maken en daarna weer lijnvolgen.
 
 			if (unsigned(pwm_count_out) < 3) then
 				pwm_count_reset <= '0';
@@ -121,15 +116,15 @@ begin
 				override_cont_new_state <= left;
 				translator_out_reset <= '0';
 			else
-				long_pwm_count_reset <= '1';
+				distance_count_reset <= '1';
 				pwm_count_reset <= '1';
 				override <= '0';
 				override_vector <= "0000";-- moet iets zijn
 				override_cont_new_state <= read_sensor_and_listen;
 				translator_out_reset <= '1';
 			end if;
- 
-		when right => 
+
+		when right => -- Voor een bepaalde periode een bocht naar rechts maken en dan weer lijnvolgen.
 
 			if (unsigned(pwm_count_out) < 4) then
 				pwm_count_reset <= '0';
@@ -138,16 +133,16 @@ begin
 				override_cont_new_state <= right;
 				translator_out_reset <= '0';
 			else
-				long_pwm_count_reset <= '1';
+				distance_count_reset <= '1';
 				pwm_count_reset <= '1';
 				override <= '0';
 				override_vector <= "0000";-- moet iets zijn
 				override_cont_new_state <= read_sensor_and_listen;
 				translator_out_reset <= '1';
 			end if;
- 
+
 		when backward => 
-		
+ 
 			if (unsigned(pwm_count_out) < 50) then
 				pwm_count_reset <= '0';
 				override <= '1';
@@ -155,7 +150,7 @@ begin
 				override_cont_new_state <= backward;
 				translator_out_reset <= '0';
 			else
-				long_pwm_count_reset <= '1';
+				distance_count_reset <= '1';
 				pwm_count_reset <= '1';
 				override <= '0';
 				override_vector <= "0000";-- moet iets zijn
@@ -164,7 +159,7 @@ begin
 			end if;
 
 		when stop => 
-		
+ 
 			if (unsigned(pwm_count_out) < 2) then
 				pwm_count_reset <= '0';
 				override <= '1';
@@ -172,93 +167,93 @@ begin
 				override_cont_new_state <= stop;
 				translator_out_reset <= '0';
 			else
-				long_pwm_count_reset <= '1';
-				pwm_count_reset <= '1';
-				override <= '0';
-				override_vector <= "0000";-- moet iets zijn
-				override_cont_new_state <= read_sensor_and_listen;
-				translator_out_reset <= '1';
-			end if; 
-			
-		when forward_station => -- Eerst een bepaalde afstand naar voren rijden. GEEN long_pwm_count_reset uitvoeren! 180 graden draaien. Lijnvolgen. Signaal afgeven dat hij verder kan.
-		
-			if (unsigned(pwm_count_out) < 3) then -- 0.15 m vooruit met 0.14 m/s. Dat is 1 seconde = 50 pwm counts. Hier gaat hij gewoon een stukje lijnvolgen
-				pwm_count_reset <= '0';
-				override <= '0'; --lijnvolgen dus override = '0'
-				override_vector <= "1000";
-				override_cont_new_state <= forward_station;
-				translator_out_reset <= '0';
-			elsif(unsigned(pwm_count_out) < 5) then -- voor 0.5 seconde 180 graden bocht maken. (25 counts uiteindelijk)
-				pwm_count_reset <= '0';
-				override <= '1';
-				override_vector <= "0111";
-				override_cont_new_state <= forward_station;
-				translator_out_reset <= '0';				
-			else
-				long_pwm_count_reset <= '0'; --deze moet '0' zijn omdat hier niet opnieuw een afstandsmeting gedaan hoeft te worden. Hierna mag er gewoon weer lijngevolgd worden tot het volgende station.
+				distance_count_reset <= '1';
 				pwm_count_reset <= '1';
 				override <= '0';
 				override_vector <= "0000";-- moet iets zijn
 				override_cont_new_state <= read_sensor_and_listen;
 				translator_out_reset <= '1';
 			end if;
-			
-		when left_station => -- VOORBEELD VOOR FORWARD_STATION COMMANDO.   
+ 
+		--LET OP! DIT IS EEN OUDE VERSIE, BIJ LEFT_STATION STAAT EEN WELLICHT BETERE VERSIE OM DIT AAN TE PAKKEN.
+		when forward_station => -- Eerst een bepaalde afstand naar voren rijden. GEEN distance_count_reset uitvoeren! 180 graden draaien. Lijnvolgen. Signaal afgeven dat hij verder kan.
+ 
+			if (unsigned(pwm_count_out) < 3) then -- 0.15 m vooruit met 0.14 m/s. Dat is 1 seconde = 50 pwm counts. Hier gaat hij gewoon een stukje lijnvolgen
+				pwm_count_reset <= '0';
+				override <= '0'; --lijnvolgen dus override = '0'
+				override_vector <= "1000";
+				override_cont_new_state <= forward_station;
+				translator_out_reset <= '0';
+			elsif (unsigned(pwm_count_out) < 5) then -- voor 0.5 seconde 180 graden bocht maken. (25 counts uiteindelijk)
+				pwm_count_reset <= '0';
+				override <= '1';
+				override_vector <= "0111";
+				override_cont_new_state <= forward_station;
+				translator_out_reset <= '0'; 
+			else
+				distance_count_reset <= '0'; --deze moet '0' zijn omdat hier niet opnieuw een afstandsmeting gedaan hoeft te worden. Hierna mag er gewoon weer lijngevolgd worden tot het volgende station.
+				pwm_count_reset <= '1';
+				override <= '0';
+				override_vector <= "0000";-- moet iets zijn
+				override_cont_new_state <= read_sensor_and_listen;
+				translator_out_reset <= '1';
+			end if;
+ 
+		when left_station => -- VOORBEELD VOOR FORWARD_STATION COMMANDO. 
 			pwm_count_reset <= '0';
 			override_vector <= "1000"; -- moet iets zijn
 			translator_out_reset <= '0';
 			override_cont_new_state <= left_station;
-			
+ 
 			case station_state is
-			
-				when first => 	-- Lijnvolgen
+ 
+				when first => -- Lijnvolgen
 					override <= '0';
-							
-					if(sensor_l = '0' or sensor_m = '0' or sensor_r = '0') then --lijnvolgen zolang in ieder geval 1 van de sensoren een lijn ziet. Zo rijd hij tot het einde van de lijn (waar ze alle drie wit (='1') worden)
+ 
+					if (sensor_l = '0' or sensor_m = '0' or sensor_r = '0') then --lijnvolgen zolang in ieder geval 1 van de sensoren een lijn ziet. Zo rijd hij tot het einde van de lijn (waar ze alle drie wit (='1') worden)
 						new_station_state <= first;
 					else
 						new_station_state <= second;
 					end if;
-					
-				when second => --Bocht maken als hij aan het einde van de lijn is. Dan geldt: sensor_l ='1' (wit).  Dan  180 graden RECHTSOM draaien. De linker sensor zal als laatste weer zwart worden. Dan verder naar de volgende stap.
+ 
+				when second => --Bocht maken als hij aan het einde van de lijn is. Dan geldt: sensor_l ='1' (wit). Dan 180 graden RECHTSOM draaien. De linker sensor zal als laatste weer zwart worden. Dan verder naar de volgende stap.
 					override <= '1';
 					override_vector <= "0100"; -- drive_motor_fastright.
-					
-					if(sensor_l = '1') then
+ 
+					if (sensor_l = '1') then
 						new_station_state <= second;
 					else
 						new_station_state <= third;
 					end if;
-				
-				when third =>
-					long_pwm_count_reset <= '0'; -- De robot is klaar om weer lijn te volgen, hij verlaat de override stand. Hij moet hier weer een signaal sturen naar de pc dat hij het volgende commando wil.
+ 
+				when third => 
+					distance_count_reset <= '0'; -- De robot is klaar om weer lijn te volgen, hij verlaat de override stand. Hij moet hier weer een signaal sturen naar de pc dat hij het volgende commando wil.
 					pwm_count_reset <= '1';
 					override <= '0';
 					override_cont_new_state <= read_sensor_and_listen;
 					translator_out_reset <= '1';
 					new_station_state <= first;
-				
+ 
 				when others => -- zelfde als Third
-					long_pwm_count_reset <= '0';
+					distance_count_reset <= '0';
 					pwm_count_reset <= '1';
 					override <= '0';
 					override_cont_new_state <= read_sensor_and_listen;
 					translator_out_reset <= '1';
 					new_station_state <= first;
-				end case;
-					
+			end case;
+ 
 
 		when right_station => 
-		
+ 
 			pwm_count_reset <= '0';
 			override_vector <= "1000"; -- moet iets zijn
 			translator_out_reset <= '0';
 			override_cont_new_state <= right_station;
-			
+ 
 			case station_state is
-			
-				when first => 	-- bocht naar rechts
-				
+ 
+				when first => -- Op de kruising een bocht naar rechts maken.
 					if (unsigned(pwm_count_out) < 4) then
 						pwm_count_reset <= '0';
 						override <= '1';
@@ -267,45 +262,43 @@ begin
 						translator_out_reset <= '0';
 						new_station_state <= first;
 					else
-						long_pwm_count_reset <= '1';
-						pwm_count_reset <= '0'; --LET OP! Is dit de bedoeling?
+						distance_count_reset <= '0';
+						pwm_count_reset <= '0'; --LET OP! is dit de bedoeling?
 						override <= '0';
 						override_vector <= "0000";-- moet iets zijn
 						override_cont_new_state <= right_station;
 						translator_out_reset <= '0';
 						new_station_state <= second;
-					end if;		
-				
-				
-				when second =>
+					end if; 
+ 
+				when second => --lijnvolgen (override = '0') zolang in ieder geval 1 van de sensoren een lijn ziet. Zo rijd hij tot het einde van de lijn (waar ze alle drie wit (='1') worden)
 					override <= '0';
-					if(sensor_l = '0' or sensor_m = '0' or sensor_r = '0') then --lijnvolgen zolang in ieder geval 1 van de sensoren een lijn ziet. Zo rijd hij tot het einde van de lijn (waar ze alle drie wit (='1') worden)
+					if (sensor_l = '0' or sensor_m = '0' or sensor_r = '0') then 
 						new_station_state <= second;
 					else
 						new_station_state <= third;
 					end if;
-					
-				when third => --Bocht maken als hij aan het einde van de lijn is. Dan geldt: sensor_l ='1' (wit).  Dan  180 graden RECHTSOM draaien. De linker sensor zal als laatste weer zwart worden. Dan verder naar de volgende stap.
+ 
+				when third => --Bocht maken als hij aan het einde van de lijn is. Dan geldt: sensor_l ='1' (wit). Dan 180 graden RECHTSOM draaien. De linker sensor zal als laatste weer zwart worden. Dan verder naar de volgende stap.
 					override <= '1';
 					override_vector <= "0100"; -- drive_motor_fastright.
-					
-					if(sensor_l = '1') then
+					if (sensor_l = '1') then
 						new_station_state <= third;
 					else
 						new_station_state <= fourth;
 					end if;
-				
-				when fourth =>
-					long_pwm_count_reset <= '0'; -- De robot is klaar om weer lijn te volgen, hij verlaat de override stand. Hij moet hier weer een signaal sturen naar de pc dat hij het volgende commando wil.
+ 
+				when fourth => -- De robot is klaar om weer lijn te volgen, hij verlaat de override stand. Hij moet hier weer een signaal sturen naar de pc dat hij het volgende commando wil.
+					distance_count_reset <= '0'; -- In het geval dat de robot een station bezocht heeft hoeft hij niet de distance counter te resetten, omdat hij geen zwarte stip meer tegen zal komen.
 					pwm_count_reset <= '1';
 					override <= '0';
 					override_cont_new_state <= read_sensor_and_listen;
 					translator_out_reset <= '1';
 					new_station_state <= first;
-				end case;
- 
+			end case;
+
 		when others => 
-			long_pwm_count_reset <= '0';
+			distance_count_reset <= '0';
 			pwm_count_reset <= '0';
 			override <= '0';
 			override_vector <= "0000";-- moet iets zijn
@@ -314,6 +307,8 @@ begin
 	end case;
 end process;
 
+
+---------------- Counter van PWM perioden (20 ms). Wordt gebruikt voor bochten van een bepaalde lengte. -------
 process (count_reset, pwm_count_reset, reset, clk)
 begin
 	if (reset = '1' or pwm_count_reset = '1') then
@@ -321,7 +316,7 @@ begin
 	elsif (rising_edge(count_reset)) then
 		pwm_count <= new_pwm_count;
 	end if;
- 
+
 end process;
 
 process (pwm_count)
@@ -330,23 +325,27 @@ begin
 	new_pwm_count <= pwm_count + 1;
 end process;
 
-process (count_reset, long_pwm_count_reset, reset, clk)
-begin
-	if (reset = '1' or long_pwm_count_reset = '1') then
-		long_pwm_count <= (others => '0');
-	elsif (rising_edge(count_reset)) then
-		long_pwm_count <= new_long_pwm_count;
-	end if;
- 
-end process;
-
-process (long_pwm_count)
-
-begin
-	new_long_pwm_count <= long_pwm_count + 1;
-end process;
-
 pwm_count_out <= std_logic_vector(pwm_count);
+----------------------------------------------------------------------------------------------------------------
+
+
+--------------- Counter van PWM perioden,  maar dan voor de afstandsmeting.------------------
+process (count_reset, distance_count_reset, reset, clk)
+begin
+	if (reset = '1' or distance_count_reset = '1') then
+		distance_count <= (others => '0');
+	elsif (rising_edge(count_reset)) then
+		distance_count <= new_distance_count;
+	end if;
+
+end process;
+
+process (distance_count)
+
+begin
+	new_distance_count <= distance_count + 1;
+end process;
+------------------------------------------------------------------------------------------------
+
 
 end architecture behavioural;
-
