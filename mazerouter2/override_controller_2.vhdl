@@ -91,60 +91,132 @@ begin
 			----------------------------------------------------------------------------------------------------------------------
  
 		when forward => --Een korte periode vooruit rijden en daarna weer over op lijnvolgen.
-
-			if (unsigned(pwm_count_out) < 50) then
-				distance_count_reset <= '0';
-				pwm_count_reset <= '0';
-				override <= '1';
-				override_vector <= "0001"; -- De staat die de robot vooruit zal laten rijden.
-				override_cont_new_state <= forward;
-				translator_out_reset <= '0';
-			else
-				distance_count_reset <= '1';
-				pwm_count_reset <= '1';
-				override <= '0';
-				override_vector <= "0000";-- moet iets zijn
-				override_cont_new_state <= read_sensor_and_listen;
-				translator_out_reset <= '1';
-			end if;
+			case station_state is
+				when first =>
+					distance_count_reset <= '0';
+					pwm_count_reset <= '0';
+					override <= '1';
+					override_vector <= "0001"; -- harde bocht naar links
+					override_cont_new_state <= forward;
+					translator_out_reset <= '0';
+			
+					if (unsigned(pwm_count_out) < 3) then
+						new_station_state <= first;
+					else
+						new_station_state <= second;
+					end if;
+				
+				when others => --second and others.
+					distance_count_reset <= '1';
+					pwm_count_reset <= '1';
+					override <= '0';
+					override_vector <= "0000";-- moet iets zijn
+					override_cont_new_state <= read_sensor_and_listen;
+					translator_out_reset <= '1';
+			end case;
+				
+--			if (unsigned(pwm_count_out) < 50) then
+--				distance_count_reset <= '0';
+--				pwm_count_reset <= '0';
+--				override <= '1';
+--				override_vector <= "0001"; -- De staat die de robot vooruit zal laten rijden.
+--				override_cont_new_state <= forward;
+--				translator_out_reset <= '0';
+--			else
+--				distance_count_reset <= '1';
+--				pwm_count_reset <= '1';
+--				override <= '0';
+--				override_vector <= "0000";-- moet iets zijn
+--				override_cont_new_state <= read_sensor_and_listen;
+--				translator_out_reset <= '1';
+--			end if;
 
 		when left => -- Voor een bepaalde tijd een bocht naar links maken en daarna weer lijnvolgen.
 
-			if (unsigned(pwm_count_out) < 3) then
-				distance_count_reset <= '0';
-				pwm_count_reset <= '0';
-				override <= '1';
-				override_vector <= "0111"; -- harde bocht naar links
-				override_cont_new_state <= left;
-				translator_out_reset <= '0';
-			else
-				distance_count_reset <= '1';
-				pwm_count_reset <= '1';
-				override <= '0';
-				override_vector <= "0000";-- moet iets zijn
-				override_cont_new_state <= read_sensor_and_listen;
-				translator_out_reset <= '1';
-			end if;
+			case station_state is
+				when first =>
+					distance_count_reset <= '0';
+					pwm_count_reset <= '0';
+					override <= '1';
+					override_vector <= "0111"; -- harde bocht naar links
+					override_cont_new_state <= left;
+					translator_out_reset <= '0';
+			
+					if (unsigned(pwm_count_out) < 3) then
+						new_station_state <= first;
+					else
+						new_station_state <= second;
+					end if;
+				
+				when others => --second and others.
+					distance_count_reset <= '1';
+					pwm_count_reset <= '1';
+					override <= '0';
+					override_vector <= "0000";-- moet iets zijn
+					override_cont_new_state <= read_sensor_and_listen;
+					translator_out_reset <= '1';
+			end case;
+				
+			
+--			if (unsigned(pwm_count_out) < 3) then
+--				distance_count_reset <= '0';
+--				pwm_count_reset <= '0';
+--				override <= '1';
+--				override_vector <= "0111"; -- harde bocht naar links
+--				override_cont_new_state <= left;
+--				translator_out_reset <= '0';
+--			else
+--				distance_count_reset <= '1';
+--				pwm_count_reset <= '0';
+--				override <= '0';
+--				override_vector <= "0000";-- moet iets zijn
+--				override_cont_new_state <= read_sensor_and_listen;
+--				translator_out_reset <= '1';
+--			end if;
 
 		when right => -- Voor een bepaalde periode een bocht naar rechts maken en dan weer lijnvolgen.
+			case station_state is
+				when first =>
+					distance_count_reset <= '0';
+					pwm_count_reset <= '0';
+					override <= '1';
+					override_vector <= "0100"; -- harde bocht naar rechts
+					override_cont_new_state <= right;
+					translator_out_reset <= '0';
+			
+					if (unsigned(pwm_count_out) < 3) then
+						new_station_state <= first;
+					else
+						new_station_state <= second;
+					end if;
+				
+				when others => --second and others.
+					distance_count_reset <= '1';
+					pwm_count_reset <= '1';
+					override <= '0';
+					override_vector <= "0000";-- moet iets zijn
+					override_cont_new_state <= read_sensor_and_listen;
+					translator_out_reset <= '1';
+			end case;
+		
+		
+--			if (unsigned(pwm_count_out) < 4) then
+--				distance_count_reset <= '0';
+--				pwm_count_reset <= '0';
+--				override <= '1';
+--				override_vector <= "0100";
+--				override_cont_new_state <= right;
+--				translator_out_reset <= '0';
+--			else
+--				distance_count_reset <= '1';
+--				pwm_count_reset <= '1';
+--				override <= '0';
+--				override_vector <= "0000";-- moet iets zijn
+--				override_cont_new_state <= read_sensor_and_listen;
+--				translator_out_reset <= '1';
+--			end if;
 
-			if (unsigned(pwm_count_out) < 4) then
-				distance_count_reset <= '0';
-				pwm_count_reset <= '0';
-				override <= '1';
-				override_vector <= "0100";
-				override_cont_new_state <= right;
-				translator_out_reset <= '0';
-			else
-				distance_count_reset <= '1';
-				pwm_count_reset <= '1';
-				override <= '0';
-				override_vector <= "0000";-- moet iets zijn
-				override_cont_new_state <= read_sensor_and_listen;
-				translator_out_reset <= '1';
-			end if;
-
-		when backward => 
+		when backward => -- Deze staat is nog niet functioneel
  
 			if (unsigned(pwm_count_out) < 50) then
 				distance_count_reset <= '0';
@@ -260,25 +332,20 @@ begin
 			override_cont_new_state <= right_station;
  
 			case station_state is
- 
-				when first => -- Op de kruising een bocht naar rechts maken.
-					if (unsigned(pwm_count_out) < 4) then
-						pwm_count_reset <= '0';
-						override <= '1';
-						override_vector <= "0100";
-						override_cont_new_state <= right_station;
-						translator_out_reset <= '0';
+ 				when first => -- Gewoon de bocht naar rechts (gekopierd)
+					distance_count_reset <= '0';
+					pwm_count_reset <= '0';
+					override <= '1';
+					override_vector <= "0100"; -- harde bocht naar rechts
+					override_cont_new_state <= right_station;
+					translator_out_reset <= '0';
+			
+					if (unsigned(pwm_count_out) < 3) then
 						new_station_state <= first;
 					else
-						distance_count_reset <= '0';
-						pwm_count_reset <= '0'; --LET OP! is dit de bedoeling?
-						override <= '0';
-						override_vector <= "0000";-- moet iets zijn
-						override_cont_new_state <= right_station;
-						translator_out_reset <= '0';
 						new_station_state <= second;
-					end if; 
- 
+					end if;
+				
 				when second => --lijnvolgen (override = '0') zolang in ieder geval 1 van de sensoren een lijn ziet. Zo rijd hij tot het einde van de lijn (waar ze alle drie wit (='1') worden)
 					override <= '0';
 					if (sensor_l = '0' or sensor_m = '0' or sensor_r = '0') then 
