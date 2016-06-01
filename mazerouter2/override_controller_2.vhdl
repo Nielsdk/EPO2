@@ -46,7 +46,7 @@ begin
 	end if;
 end process;
 
-process (clk, translator_out, sensor_l, sensor_m, sensor_r, override_cont_state, pwm_count, distance_count, pwm_count_out)
+process (clk, translator_out, sensor_l, sensor_m, sensor_r, override_cont_state, pwm_count, distance_count, pwm_count_out, station_state)
 
 begin
 	--pwm_count_reset <= '1';
@@ -54,15 +54,16 @@ begin
 	--override_vector <= "0000";-- moet iets zijn
 	new_station_state <= station_state;
  
-	distance_count_reset <= '0';
+	
 	case override_cont_state is
 
 		when read_sensor_and_listen => 
 			translator_out_reset <= '0';
-			override_vector <= "0000";
+			override_vector <= "0000"; -- Stel hij override de controller hier, dan zet hij de robot stil.
 			new_station_state <= first;
+			distance_count_reset <= '0';
 
-			if (sensor_l = '0' and sensor_m = '0' and sensor_r = '0' and distance_count > 2 ) then -- neem de lijnvolger over. DISTANCE MOET TOEGEVOEGD WORDEN. or distance = '1'
+			if (sensor_l = '0' and sensor_m = '0' and sensor_r = '0' and distance_count > 2 ) then -- neem de lijnvolger over. DISTANCE MOET TOEGEVOEGD WORDEN.
 				override <= '1';
 				pwm_count_reset <= '1'; -- Hij komt in de override stand en mag beginnen met tellen van het aantal pwm perioden.
  
@@ -92,7 +93,7 @@ begin
 		when forward => --Een korte periode vooruit rijden en daarna weer over op lijnvolgen.
 
 			if (unsigned(pwm_count_out) < 50) then
-
+				distance_count_reset <= '0';
 				pwm_count_reset <= '0';
 				override <= '1';
 				override_vector <= "0001"; -- De staat die de robot vooruit zal laten rijden.
@@ -110,6 +111,7 @@ begin
 		when left => -- Voor een bepaalde tijd een bocht naar links maken en daarna weer lijnvolgen.
 
 			if (unsigned(pwm_count_out) < 3) then
+				distance_count_reset <= '0';
 				pwm_count_reset <= '0';
 				override <= '1';
 				override_vector <= "0111"; -- harde bocht naar links
@@ -127,6 +129,7 @@ begin
 		when right => -- Voor een bepaalde periode een bocht naar rechts maken en dan weer lijnvolgen.
 
 			if (unsigned(pwm_count_out) < 4) then
+				distance_count_reset <= '0';
 				pwm_count_reset <= '0';
 				override <= '1';
 				override_vector <= "0100";
@@ -144,6 +147,7 @@ begin
 		when backward => 
  
 			if (unsigned(pwm_count_out) < 50) then
+				distance_count_reset <= '0';
 				pwm_count_reset <= '0';
 				override <= '1';
 				override_vector <= "1000";
@@ -161,6 +165,7 @@ begin
 		when stop => 
  
 			if (unsigned(pwm_count_out) < 2) then
+				distance_count_reset <= '0';
 				pwm_count_reset <= '0';
 				override <= '1';
 				override_vector <= "0000";
@@ -179,12 +184,14 @@ begin
 		when forward_station => -- Eerst een bepaalde afstand naar voren rijden. GEEN distance_count_reset uitvoeren! 180 graden draaien. Lijnvolgen. Signaal afgeven dat hij verder kan.
  
 			if (unsigned(pwm_count_out) < 3) then -- 0.15 m vooruit met 0.14 m/s. Dat is 1 seconde = 50 pwm counts. Hier gaat hij gewoon een stukje lijnvolgen
+				distance_count_reset <= '0';
 				pwm_count_reset <= '0';
 				override <= '0'; --lijnvolgen dus override = '0'
 				override_vector <= "1000";
 				override_cont_new_state <= forward_station;
 				translator_out_reset <= '0';
 			elsif (unsigned(pwm_count_out) < 5) then -- voor 0.5 seconde 180 graden bocht maken. (25 counts uiteindelijk)
+				distance_count_reset <= '0';
 				pwm_count_reset <= '0';
 				override <= '1';
 				override_vector <= "0111";
@@ -200,6 +207,7 @@ begin
 			end if;
  
 		when left_station => -- VOORBEELD VOOR FORWARD_STATION COMMANDO. 
+			distance_count_reset <= '0';
 			pwm_count_reset <= '0';
 			override_vector <= "1000"; -- moet iets zijn
 			translator_out_reset <= '0';
@@ -245,7 +253,7 @@ begin
  
 
 		when right_station => 
- 
+			distance_count_reset <= '0';
 			pwm_count_reset <= '0';
 			override_vector <= "1000"; -- moet iets zijn
 			translator_out_reset <= '0';
