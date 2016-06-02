@@ -16,7 +16,7 @@ entity tx_translator is
 	port(	clk, reset : in std_logic;
 	      	control : in std_logic;
 		new_control : in std_logic;
-		--flag : in std_logic;
+		flag : in std_logic;
 		translator_out : out std_logic_vector(7 downto 0);
 		send : out std_logic
 );
@@ -45,7 +45,7 @@ begin
 		end if;
 	end process;
 
-	process(clk, new_control)
+	process(clk, new_control, flag)
 	begin
 		state_next <= state_reg;
 		send_next <= send_reg;
@@ -62,7 +62,7 @@ begin
 				control_next <= control; -- Buffer het signaal...
 				state_next <= flag_wait; 
 			when flag_wait =>
-				--if(flag = '0') then -- Als de tx niet aan het versturen is
+				if(flag = '0') then -- Als de tx niet aan het versturen is
 					send_next <= '1';
 					case(control_reg) is
 						when '1' => translator_next <= "00110000"; -- signaal als er een mijn ligt
@@ -70,6 +70,7 @@ begin
 						when others => translator_next <= translator_reg; -- Doe niks joh.
 					end case;
 					state_next <= idle; -- Weer terug -> Send is een pulse.
+				end if;
 		end case;
 	end process;
 
