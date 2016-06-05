@@ -3,6 +3,18 @@ USE ieee.std_logic_1164.ALL;
 USE ieee.numeric_std.ALL;
 
 ENTITY override_controller IS
+	-- CONSTANTES
+	generic (
+	CONSTANT OPERATION_DISTANCE: INTEGER := 3; --140; -- Minimum aantal PWM pulsen die gepasseerd moeten zijn sinds het uitvoeren van de vorige mogelijkheid van de override controller
+	CONSTANT FORWARD_PWM_COUNT: INTEGER := 1;--20; -- Aantal PWM pulsen dat die in de staten forward, left, en right moet doorbrengen
+	CONSTANT LEFT_PWM_COUNT: INTEGER := 1;--40;
+	CONSTANT RIGHT_PWM_COUNT: INTEGER := 1;--40;
+	CONSTANT TX_MIJN: std_logic_vector(7 downto 0) := "00110000";
+	CONSTANT TX_GEEN_MIJN: std_logic_vector(7 downto 0) := "00110001";
+	CONSTANT RELATIVE_SEND: INTEGER := 1;--20;
+	CONSTANT DISTANCE_ON_RESET: unsigned := "00000000000"--"00010010110"
+	);
+
 	PORT (
 		clk, reset            : IN std_logic;
 		translator_out        : IN std_logic_vector(7 DOWNTO 0);
@@ -13,7 +25,8 @@ ENTITY override_controller IS
 		sensor_l              : IN std_logic;
 		sensor_m              : IN std_logic;
 		sensor_r              : IN std_logic;
-		tx_out, tx_send_out   : OUT std_logic
+		tx_out		      : OUT std_logic_vector(7 DOWNTO 0);
+		tx_send_out  	      : OUT std_logic
 	);
 END ENTITY override_controller;
 
@@ -28,14 +41,9 @@ ARCHITECTURE behavioural OF override_controller IS
 	TYPE station_state_type IS ( -- States gebruikt binnen de logica van de *_station staten van de override_controller_states.
 	first, second, third, fourth, fifth);
 	TYPE tx_state IS ( -- States gebruikt bij de transmitter
-	tx_idle, tx_wait, tx_send_station, tx_send, tx_stop);
+	tx_idle, tx_wait_normal, tx_wait_station, tx_send);
 
-	-- CONSTANTES
-	CONSTANT OPERATION_DISTANCE: INTEGER := 140; -- Minimum aantal PWM pulsen die gepasseerd moeten zijn sinds het uitvoeren van de vorige mogelijkheid van de override controller
-	CONSTANT FORWARD_PWM_COUNT: INTEGER := 20; -- Aantal PWM pulsen dat die in de staten forward, left, en right moet doorbrengen
-	CONSTANT LEFT_PWM_COUNT: INTEGER := 40;
-	CONSTANT RIGHT_PWM_COUNT: INTEGER := 40;
-
+	
 
 	-- SIGNAL
 	SIGNAL station_state, new_station_state : station_state_type; -- Geheugenelementen voor het bepalen van de volgende station_state
@@ -412,7 +420,7 @@ pwm_count_out <= std_logic_vector(pwm_count);
 PROCESS (count_reset, distance_count_reset, reset, clk)
 BEGIN
 	IF (reset = '1') THEN
-		distance_count <= "00010010110"; -- Bij een reset doet de distance counter er niet toe, hij begint dan namelijk bij een station.
+		distance_count <= DISTANCE_ON_RESET; -- Bij een reset doet de distance counter er niet toe, hij begint dan namelijk bij een station.
 	ELSIF (distance_count_reset = '1') THEN
 		distance_count <= (OTHERS => '0');
 	ELSIF (rising_edge(count_reset)) THEN
@@ -430,7 +438,7 @@ END PROCESS;
 PROCESS (clk, sensor_l, sensor_r, sensor_m, distance_count, distance_count_reset)
 BEGIN
 	tx_state_next <= tx_state_reg;
-	tx_send_out <= '0';
+	tx_out <= TX_GEEN_MIJN;
 	CASE(tx_state_reg) IS
 		WHEN tx_idle => -- Wachten wachten wachten wachten....
 			tx_send_out <= '0';
@@ -442,14 +450,15 @@ BEGIN
 		WHEN tx_send => -- stuur 1 klokpuls
 			tx_send_out <= '1';
 			IF ((override_cont_state = forward_station OR override_cont_state = right_station OR override_cont_state = left_station)) THEN
-				tx_state_next <= tx_send_station;
+				tx_state_next <= tx_wait_station;
 			ELSE
-				tx_state_next <= tx_stop;
+				tx_state_next <= tx_wait_normal;
 			END IF;
 		WHEN tx_wait_station => -- Forceer hem om maar 1 keer te sturen bij station-staten
 			tx_send_out <= '0';
 			IF (NOT(override_cont_state = forward_station OR override_cont_state = right_station OR override_cont_state = left_station)) THEN
 			tx_state_next <= tx_idle;
+			end if;
 		WHEN tx_wait_normal => -- Forceer hem om maar een keer te sturen bij normale states. Aan het einde van een handeling wordt distance_count gereset
 			tx_send_out <= '0';
 			IF(distance_count_reset = '1') then
