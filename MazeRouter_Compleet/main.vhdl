@@ -1,5 +1,6 @@
 LIBRARY IEEE;
 USE IEEE.std_logic_1164.ALL;
+USE ieee.numeric_std.ALL;
 
 ENTITY systeem IS
 	PORT (
@@ -59,7 +60,8 @@ ARCHITECTURE structural OF systeem IS
 	sensor_l           : in std_logic;
 	sensor_m           : in std_logic;
 	sensor_r           : in std_logic;
-	tx_out, tx_send_out   : OUT std_logic
+	tx_out : OUT std_logic_vector(7 downto 0);
+       	tx_send_out : OUT std_logic
 	);
 	END COMPONENT override_controller;
 	COMPONENT uart IS
@@ -115,15 +117,15 @@ ARCHITECTURE structural OF systeem IS
 
 		);
 	END COMPONENT controller;
-	component tx_translator is
-	port(	clk, reset : in std_logic;
-	      	control : in std_logic;
-		new_control : in std_logic;
-		--flag : in std_logic;
-		translator_out : out std_logic_vector(7 downto 0);
-		send : out std_logic
-	);
-	end component tx_translator;
+--	component tx_translator is
+--	port(	clk, reset : in std_logic;
+--	      	control : in std_logic;
+--		new_control : in std_logic;
+--		--flag : in std_logic;
+--		translator_out : out std_logic_vector(7 downto 0);
+--		send : out std_logic
+--	);
+--	end component tx_translator;
 
 
 	-- Signalen uit inputbuffer
@@ -151,10 +153,6 @@ ARCHITECTURE structural OF systeem IS
 	-- Signalen uit de receiver vertaler
 	SIGNAL TL_translator_out : std_logic_vector(7 DOWNTO 0); -- Output van de vertaler
 	SIGNAL TL_translator_out_reset : std_logic; -- Reset van de vertaler
-	-- Signalen uit de tx_translator
-	SIGNAL TL_control : std_logic;
-	SIGNAL TL_new_control : std_logic;
-	SIGNAL TL_tx_flag : std_logic;
 	-- Null signalen
 	SIGNAL NULL_1 : std_logic_vector(7 downto 0);
 	SIGNAL NULL_2 : std_logic;	
@@ -244,8 +242,6 @@ BEGIN
 	send_check => NULL_2 -- Niet verbinden
 	);
 
-	
-
 	C07 : override_controller
 	PORT MAP(
 	clk => TL_clk, 
@@ -258,20 +254,9 @@ BEGIN
 	sensor_m => TL_sensor_m_buff, 
 	sensor_r => TL_sensor_r_buff,
 	count_reset => TL_count_reset,
-	tx_out => TL_control,
-	tx_send_out => TL_new_control	
+	tx_out => TL_uart_in,
+	tx_send_out => TL_uart_write	
 	);
-
-	C08 : tx_translator
-	PORT MAP(
-	clk => TL_clk,
-	reset => TL_reset,
-	control => TL_control,
-	new_control => TL_new_control,
-	translator_out => TL_uart_in,
-	send => TL_uart_write
-	--flag => TL_tx_flag
-	);
-	--TL_tx_flag <= '0';
+	
 END ARCHITECTURE structural;
 
