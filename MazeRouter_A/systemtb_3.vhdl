@@ -102,8 +102,11 @@ ARCHITECTURE systeem_tb OF tb IS
 			TL_sensor_m  : IN std_logic;
 			TL_sensor_r  : IN std_logic;
 			TL_motor_l   : OUT std_logic;
-			TL_motor_r   : OUT std_logic
-		);
+		TL_motor_r   : OUT std_logic;
+		TL_an 		 : OUT STD_LOGIC_VECTOR (3 downto 0); -- Selectie van de led
+		TL_sseg 	 : OUT STD_LOGIC_VECTOR (7 downto 0); -- Getal dat weergegeven moet worden.
+		TL_led : out STD_LOGIC_VECTOR (7 downto 0)
+	);
 	END COMPONENT systeem;
  
 	-- Relevante signalen
@@ -113,6 +116,8 @@ ARCHITECTURE systeem_tb OF tb IS
 	SIGNAL tx : std_logic; --output bit stream
 	SIGNAL sensor_l, sensor_r, sensor_m : std_logic;
 	SIGNAL motor_l, motor_r : std_logic;
+	SIGNAL sseg, led : std_logic_vector (7 downto 0);
+	SIGNAL an : std_logic_vector (3 downto 0);
 BEGIN
 	rx_signal_feed(rx, RESET_TIME);
 	sensors_signal_feed(sensor_l, sensor_m, sensor_r);
@@ -127,7 +132,10 @@ BEGIN
 	TL_sensor_m => sensor_m, -- IN
 	TL_sensor_r => sensor_r, -- IN
 	TL_motor_l => motor_l, 
-	TL_motor_r => motor_r
+	TL_motor_r => motor_r,
+	TL_an => an,
+	TL_sseg => sseg,
+	TL_led => led
 	);
 
 	S03 : clk <= '1' AFTER 0 ns, 
