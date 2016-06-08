@@ -5,10 +5,10 @@ USE ieee.numeric_std.ALL;
 ENTITY override_controller IS
 	-- CONSTANTES
 	generic (
-	CONSTANT OPERATION_DISTANCE: INTEGER := 144; --140; -- Minimum aantal PWM pulsen die gepasseerd moeten zijn sinds het uitvoeren van de vorige mogelijkheid van de override controller
-	CONSTANT FORWARD_PWM_COUNT: INTEGER := 20;--20; -- Aantal PWM pulsen dat die in de staten forward, left, en right moet doorbrengen
-	CONSTANT LEFT_PWM_COUNT: INTEGER := 35;--35;
-	CONSTANT RIGHT_PWM_COUNT: INTEGER := 35;--35;
+	CONSTANT OPERATION_DISTANCE: INTEGER := 0; --140 1; -- Minimum aantal PWM pulsen die gepasseerd moeten zijn sinds het uitvoeren van de vorige mogelijkheid van de override controller
+	CONSTANT FORWARD_PWM_COUNT: INTEGER := 2;--20; -- Aantal PWM pulsen dat die in de staten forward, left, en right moet doorbrengen
+	CONSTANT LEFT_PWM_COUNT: INTEGER := 2;--35;
+	CONSTANT RIGHT_PWM_COUNT: INTEGER := 2;--35;
 	CONSTANT TX_MIJN: std_logic_vector(7 downto 0) := "00110000";
 	CONSTANT TX_GEEN_MIJN: std_logic_vector(7 downto 0) := "00110001";
 	CONSTANT RELATIVE_SEND: INTEGER := 20;--20;
@@ -526,21 +526,21 @@ END PROCESS;
 		 
 process(distance_count)
 begin
-IF(distance_count < operation_distance *1/8) THEN 
+IF(distance_count <  18) THEN --18
 	led <= "00000000";
-ELSIF(distance_count < operation_distance *2/8) THEN
+ELSIF(distance_count < 36) THEN -- 36 operation_distance *2/8
 	led <= "00000001";
-ELSIF(distance_count < operation_distance *3/8) THEN
+ELSIF(distance_count < 54) THEN -- 54
 	led <= "00000011";
-ELSIF(distance_count < operation_distance *4/8) THEN
+ELSIF(distance_count < 72) THEN -- 72
 	led <= "00000111";
-ELSIF(distance_count < operation_distance *5/8) THEN
+ELSIF(distance_count < 90) THEN -- 90
 	led <= "00001111";
-ELSIF(distance_count < operation_distance *6/8) THEN
+ELSIF(distance_count < 108) THEN --108
 	led <= "00011111";
-ELSIF(distance_count < operation_distance *7/8) THEN
+ELSIF(distance_count < 126) THEN --126
 	led <= "00111111";	
-ELSIF(distance_count < operation_distance) THEN
+ELSIF(distance_count < operation_distance) THEN -- 144
 	led <= "01111111";
 ELSE
 	led <= "11111111";
