@@ -1,0 +1,60 @@
+#========================================================
+#    Pin assingment for BASYS2
+#    Xilinx Spartan3E board
+#========================================================
+
+#========================================================
+# clock and reset
+#========================================================
+NET "TL_clk"    LOC = "B8" ;
+NET "TL_reset" LOC = P11;  
+
+#========================================================
+# buttons & switches 
+#========================================================
+# 4 push buttons 
+NET "mine_button"   LOC = "G12";  #btn<0>
+
+#NET "sw<0>" LOC = "P11";  # Bank = 2, Signal name = SW0
+
+# Pin assignment for PMOD connectors
+#NET "JA<1>" LOC = "B2" ;
+NET "TL_sensor_l" LOC =B5;
+NET "TL_sensor_m" LOC =J3;
+NET "TL_sensor_r" LOC =A3;
+
+NET "TL_motor_l" LOC =A9;
+NET "TL_motor_r" LOC =B9;
+
+NET "TL_rx" LOC = "A10" ; #xbee out (received data)
+NET "TL_tx" LOC = "C9" ; #xbee in (data to send)
+
+#========================================================
+# 4-digit time-multiplexed 7-segment LED display
+#========================================================
+# Connected to Basys2 onBoard 7seg display
+NET "TL_sseg<0>" LOC = "L14"; # Bank = 1, Signal name = CA
+NET "TL_sseg<1>" LOC = "H12"; # Bank = 1, Signal name = CB
+NET "TL_sseg<2>" LOC = "N14"; # Bank = 1, Signal name = CC
+NET "TL_sseg<3>" LOC = "N11"; # Bank = 2, Signal name = CD
+NET "TL_sseg<4>" LOC = "P12"; # Bank = 2, Signal name = CE
+NET "TL_sseg<5>" LOC = "L13"; # Bank = 1, Signal name = CF
+NET "TL_sseg<6>" LOC = "M12"; # Bank = 1, Signal name = CG
+NET "TL_sseg<7>" LOC = "N13"; # Bank = 1, Signal name = DP
+
+NET "TL_an<3>" LOC = "K14"; # Bank = 1, Signal name = AN3
+NET "TL_an<2>" LOC = "M13"; # Bank = 1, Signal name = AN2
+NET "TL_an<1>" LOC = "J12"; # Bank = 1, Signal name = AN1
+NET "TL_an<0>" LOC = "F12"; # Bank = 1, Signal name = AN0
+
+#========================================================
+# 8 discrete led
+#========================================================
+NET "TL_Led<7>" LOC = "G1" ; # Bank = 3, Signal name = LD7
+NET "TL_Led<6>" LOC = "P4" ; # Bank = 2, Signal name = LD6
+NET "TL_Led<5>" LOC = "N4" ;  # Bank = 2, Signal name = LD5
+NET "TL_Led<4>" LOC = "N5" ;  # Bank = 2, Signal name = LD4
+NET "TL_led<3>" LOC = "P6" ; # Bank = 2, Signal name = LD3
+NET "TL_led<2>" LOC = "P7" ; # Bank = 3, Signal name = LD2
+NET "TL_led<1>" LOC = "M11" ; # Bank = 2, Signal name = LD1
+NET "TL_led<0>" LOC = "M5" ;  # Bank = 2, Signal name = LD0
