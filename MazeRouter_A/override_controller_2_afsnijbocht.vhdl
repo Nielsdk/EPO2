@@ -5,14 +5,14 @@ USE ieee.numeric_std.ALL;
 ENTITY override_controller IS
 	-- CONSTANTES
 	generic (
-	CONSTANT OPERATION_DISTANCE: INTEGER := 136; --140 1; -- Minimum aantal PWM pulsen die gepasseerd moeten zijn sinds het uitvoeren van de vorige mogelijkheid van de override controller
-	CONSTANT FORWARD_PWM_COUNT: INTEGER := 20;--20; -- Aantal PWM pulsen dat die in de staten forward, left, en right moet doorbrengen
-	CONSTANT LEFT_PWM_COUNT: INTEGER := 35;--35;
-	CONSTANT RIGHT_PWM_COUNT: INTEGER := 35;--35;
+	CONSTANT OPERATION_DISTANCE: INTEGER := 3; --140; -- Minimum aantal PWM pulsen die gepasseerd moeten zijn sinds het uitvoeren van de vorige mogelijkheid van de override controller
+	CONSTANT FORWARD_PWM_COUNT: INTEGER := 1;--20; -- Aantal PWM pulsen dat die in de staten forward, left, en right moet doorbrengen
+	CONSTANT LEFT_PWM_COUNT: INTEGER := 1;--40;
+	CONSTANT RIGHT_PWM_COUNT: INTEGER := 1;--40;
 	CONSTANT TX_MIJN: std_logic_vector(7 downto 0) := "00110000";
 	CONSTANT TX_GEEN_MIJN: std_logic_vector(7 downto 0) := "00110001";
-	CONSTANT RELATIVE_SEND: INTEGER := 20;--20;
-	CONSTANT DISTANCE_ON_RESET: unsigned := "00000010010110"--"000010010110"
+	CONSTANT RELATIVE_SEND: INTEGER := 1;--20;
+	CONSTANT DISTANCE_ON_RESET: unsigned := "00000000000"--"00010010110"
 	);
 
 	PORT (
@@ -25,13 +25,8 @@ ENTITY override_controller IS
 		sensor_l              : IN std_logic;
 		sensor_m              : IN std_logic;
 		sensor_r              : IN std_logic;
-		tx_out		     	  : OUT std_logic_vector(7 DOWNTO 0);
-		tx_send_out  	      : OUT std_logic;
-		count_in           : in std_logic_vector (19 downto 0);
-		
-		an 					 : OUT STD_LOGIC_VECTOR (3 downto 0); -- Selectie van de led
-		sseg 				 : OUT STD_LOGIC_VECTOR (7 downto 0); -- Getal dat weergegeven moet worden.
-		led 				 : out STD_LOGIC_VECTOR (7 downto 0)
+		tx_out		      : OUT std_logic_vector(7 DOWNTO 0);
+		tx_send_out  	      : OUT std_logic
 	);
 END ENTITY override_controller;
 
@@ -42,29 +37,21 @@ ARCHITECTURE behavioural OF override_controller IS
 	forward, backward, stop,
        	right90, right, fastright, 
 	left90, left, fastleft, 
-	forward_station, left_station, right_station, mine);
+	forward_station, left_station, right_station);
 	TYPE station_state_type IS ( -- States gebruikt binnen de logica van de *_station staten van de override_controller_states.
 	first, second, third, fourth, fifth);
 	TYPE tx_state IS ( -- States gebruikt bij de transmitter
 	tx_idle, tx_wait_normal, tx_wait_station, tx_send);
 
-	TYPE prev_operation_statetype is (station, not_station);
+	
 
-	-- Controle var
-	
-	SIGNAL prev_operation_state, new_prev_operation_state : prev_operation_statetype;
-	
+	-- SIGNAL
 	SIGNAL station_state, new_station_state : station_state_type; -- Geheugenelementen voor het bepalen van de volgende station_state
 	SIGNAL override_cont_state, override_cont_new_state : override_controller_states; -- Geheugenelementen voor het bepalen van de volgende station_state
 	SIGNAL tx_state_reg, tx_state_next : tx_state; -- Geheugenelementen voor het bepalen van de volgende station_state
-	SIGNAL pwm_count, new_pwm_count, distance_count, new_distance_count : unsigned (13 DOWNTO 0); -- Geheugenelementen voor de pwm-tellers voor de bochten en voor de afstand lijnengevolgd
-	SIGNAL pwm_count_out : std_logic_vector (13 DOWNTO 0);
+	SIGNAL pwm_count, new_pwm_count, distance_count, new_distance_count : unsigned (10 DOWNTO 0); -- Geheugenelementen voor de pwm-tellers voor de bochten en voor de afstand lijnengevolgd
+	SIGNAL pwm_count_out : std_logic_vector (10 DOWNTO 0);
 	SIGNAL pwm_count_reset, distance_count_reset : std_logic; -- Resets voor de pwm-tellers.
-	SIGNAL next_translator_out_reset : std_logic;
-	
-	--signalen voor display
-	SIGNAL override_state_sseg, station_state_sseg	 : STD_LOGIC_VECTOR (7 downto 0);
-	
 BEGIN
 
 PROCESS (clk, reset) -- Check op rising edge en op resets
@@ -74,38 +61,28 @@ BEGIN
 			override_cont_state <= read_sensor_and_listen; -- Zet de states in de eerste staat
 			station_state <= first;
 			tx_state_reg <= tx_idle;
-			prev_operation_state <= not_station;
-			translator_out_reset <= '0';
 		ELSE
 			override_cont_state <= override_cont_new_state; -- Ga naar de volgende staat op de rising edge
 			station_state <= new_station_state;
 			tx_state_reg <= tx_state_next;
-			prev_operation_state <= new_prev_operation_state;
-			translator_out_reset <= next_translator_out_reset;
 		END IF;
 	END IF;
 END PROCESS;
 
-PROCESS (clk, translator_out, sensor_l, sensor_m, sensor_r, override_cont_state, pwm_count, distance_count, pwm_count_out, station_state, prev_operation_state) -- Gedrag van specefieke handelingen
+PROCESS (clk, translator_out, sensor_l, sensor_m, sensor_r, override_cont_state, pwm_count, distance_count, pwm_count_out, station_state) -- Gedrag van specefieke handelingen
 BEGIN
-	next_translator_out_reset <= '0';
 	new_station_state <= station_state; -- Moet een waarde hebben
-	new_prev_operation_state <= prev_operation_state;
-	pwm_count_reset <= '0';
+
 	CASE override_cont_state IS 
 		WHEN read_sensor_and_listen => 	-- In deze staat zal hij lijnvolgen (dwz, overide = 0) totdat een bepaalde afstand is overschreden
 		       				-- EN de sensoren allemaal zwart zijn (Bij een kruispunt!)
-			
+			translator_out_reset <= '0'; -- Houdt de uitgang op de translator out
 			distance_count_reset <= '0'; -- De distance-teller telt gewoon door
 			override_vector <= "0000"; -- Stel hij override de controller hier, dan zet hij de robot stil.
 			new_station_state <= first; -- Eerste staat in de station FSM, (als het ware een reset van de FSM)
-			
-			
 
 			IF (sensor_l = '0' AND sensor_m = '0' AND sensor_r = '0' AND distance_count > OPERATION_DISTANCE) THEN -- neem de lijnvolger over. 
 				override <= '1'; -- TAKE ME OVER
-				
-				next_translator_out_reset <= '1';
 				pwm_count_reset <= '1'; -- Hij komt in de override stand en mag beginnen met tellen van het aantal pwm perioden. Deze teller is voor de bochten.
 				CASE translator_out IS -- Afhankelijk van het ingekomen signaal van C wordt er hier gekozen uit de juiste bocht.
 					WHEN "10000000" => override_cont_new_state <= stop; -- Standaard coderingen 
@@ -116,18 +93,13 @@ BEGIN
 					WHEN "11000001" => override_cont_new_state <= forward_station;
 					WHEN "11000010" => override_cont_new_state <= right_station; --OMGEDRAAID MET LEFT_STATION!!!!!!!!!
 					WHEN "11000100" => override_cont_new_state <= left_station;
-					WHEN OTHERS => override_cont_new_state <= read_sensor_and_listen;
-										next_translator_out_reset <= '0'; -- Errorcontrole op verkeerd signaal
+					WHEN OTHERS => override_cont_new_state <= read_sensor_and_listen; -- Errorcontrole op verkeerd signaal
 				END CASE;
 			ELSE
 				override <= '0';
 				pwm_count_reset <= '0'; -- pwm_count is een counter die telt per 20 ms. Zo is het aantal pwm pulsen te tellen.
 				override_cont_new_state <= read_sensor_and_listen;
 			END IF;
-			
-			IF(Mine_out = '1') THEN
-				override_cont_new_state <= mine;
-				new_translator_out_reset <= '1';
 
 	-- Dit zijn de staten voor de verschillende bochten: rechtdoor, links en rechts bij een kruising.
 	-- Er zijn ook staten voor een bocht naar een station, hier zal de staat ook de bocht aan het einde van de weg maken.
@@ -135,15 +107,14 @@ BEGIN
 
 
 		WHEN forward => --Een korte periode vooruit rijden en daarna weer over op lijnvolgen.
-		new_prev_operation_state <= not_station;
 			CASE station_state IS  
 				WHEN first =>
 					distance_count_reset <= '0'; -- Reset de beide tellers niet
 					pwm_count_reset <= '0';
 					override <= '0'; -- Gewoon lijnvolgen, hij zal automatisch recht door rijden!
 					override_vector <= "0001"; -- vooruit
-					override_cont_new_state <= forward; -- blijf in forward
-				 
+					override_cont_new_state <= forward; -- Ga naar de volgende staat
+					translator_out_reset <= '0'; -- 
 					IF (unsigned(pwm_count_out) < FORWARD_PWM_COUNT) THEN -- Zie lijst met constantes
 						new_station_state <= first; -- Blijf in dezelfde staat als hij nog niet lang genoeg rechtdoor heeft gereden
 					ELSE
@@ -155,11 +126,10 @@ BEGIN
 					override <= '0'; -- Lijnvolgen
 					override_vector <= "0000";-- Moet iets zijn, dont care
 					override_cont_new_state <= read_sensor_and_listen; -- Ga naar de begin staat
-
+					translator_out_reset <= '1'; -- Reset de output
 			END CASE;
 			
 		WHEN left => -- Voor een bepaalde tijd een bocht naar links maken en daarna weer lijnvolgen.
-		new_prev_operation_state <= not_station;
 			CASE station_state IS
 				WHEN first =>
 					distance_count_reset <= '0'; -- OPM: Dit wordt wel vaker gedaan. Distance_count_reset wordt wel vaker niet gereset ookal wordt die niet gebruikt
@@ -167,7 +137,7 @@ BEGIN
 					override <= '1';
 					override_vector <= "0111"; -- harde bocht naar links 0111 -- zachte bocht naar links: 0101
 					override_cont_new_state <= left; 
-
+					translator_out_reset <= '0';
 					IF (unsigned(pwm_count_out) < LEFT_PWM_COUNT) THEN
 						new_station_state <= first; -- Blijf in dezelfde staat
 					ELSE
@@ -179,7 +149,7 @@ BEGIN
 					override <= '1';
 					override_vector <= "0001"; -- rechtdoor
 					override_cont_new_state <= left; 
-
+					translator_out_reset <= '0';
 					if(sensor_l = '0') then --OUD: (sensor_r = '0' AND sensor_m = '0')
 						new_station_state <= third; -- ga naar volgende staat
 					else
@@ -192,11 +162,10 @@ BEGIN
 					override <= '0'; -- Lijnvolen
 					override_vector <= "0000";-- moet iets zijn
 					override_cont_new_state <= read_sensor_and_listen;
-
+					translator_out_reset <= '1';
 			END CASE;
-	
-	WHEN right => -- Voor een bepaalde periode een bocht naar rechts maken en dan weer lijnvolgen.
-		new_prev_operation_state <= not_station;
+
+		WHEN right => -- Voor een bepaalde periode een bocht naar rechts maken en dan weer lijnvolgen.
 			CASE station_state IS
 				WHEN first =>
 					distance_count_reset <= '0';
@@ -204,7 +173,7 @@ BEGIN
 					override <= '1';
 					override_vector <= "0100"; -- harde bocht naar rechts
 					override_cont_new_state <= right;
-
+					translator_out_reset <= '0';
 					IF (unsigned(pwm_count_out) < RIGHT_PWM_COUNT) THEN
 						new_station_state <= first;
 					ELSE
@@ -217,7 +186,7 @@ BEGIN
 					override <= '1';
 					override_vector <= "0001"; -- rechtdoor
 					override_cont_new_state <= right; 
-	
+					translator_out_reset <= '0';
 					if(sensor_r = '0') then -- oud:  NOT(sensor_l = '0' AND sensor_m = '0')
 						new_station_state <= third;
 					else
@@ -230,7 +199,7 @@ BEGIN
 					override <= '0';
 					override_vector <= "0000";-- moet iets zijn
 					override_cont_new_state <= read_sensor_and_listen;
-		
+					translator_out_reset <= '1';
 			END CASE;
 			
 		WHEN backward => -- Deze staat is nog niet functioneel
@@ -240,14 +209,14 @@ BEGIN
 				override <= '1';
 				override_vector <= "1000";
 				override_cont_new_state <= backward;
-		
+				translator_out_reset <= '0';
 			ELSE
 				distance_count_reset <= '1';
 				pwm_count_reset <= '1';
 				override <= '0';
 				override_vector <= "0000";-- moet iets zijn
 				override_cont_new_state <= read_sensor_and_listen;
-			
+				translator_out_reset <= '1';
 			END IF;
 
 		WHEN stop =>
@@ -257,23 +226,22 @@ BEGIN
 				override <= '1';
 				override_vector <= "0000";
 				override_cont_new_state <= stop;
-		
+				translator_out_reset <= '0';
 			ELSE
 				distance_count_reset <= '1';
 				pwm_count_reset <= '1';
 				override <= '0';
 				override_vector <= "0000";-- moet iets zijn
 				override_cont_new_state <= read_sensor_and_listen;
-		
+				translator_out_reset <= '1';
 			END IF;
 
 
 		WHEN left_station => 
-			new_prev_operation_state <= station;
 			distance_count_reset <= '0';
 			pwm_count_reset <= '0';
 			override_vector <= "1000"; -- moet iets zijn
-	
+			translator_out_reset <= '0';
 			override_cont_new_state <= left_station;
 			CASE station_state IS
 				WHEN first => -- Gewoon de bocht naar links(gekopierd)
@@ -282,7 +250,7 @@ BEGIN
 					override <= '1';
 					override_vector <= "0111"; -- harde bocht naar links
 					override_cont_new_state <= left_station;
-		
+					translator_out_reset <= '0';
 					IF (unsigned(pwm_count_out) < LEFT_PWM_COUNT) THEN
 						new_station_state <= first;
 					ELSE
@@ -294,7 +262,7 @@ BEGIN
 					override <= '1';
 					override_vector <= "0001"; -- Rechtdoor
 					override_cont_new_state <= left_station;
-		
+					translator_out_reset <= '0';
 					IF (sensor_r = '0' AND sensor_m = '0') THEN
 						new_station_state <= THIRD;
 					ELSE
@@ -321,16 +289,15 @@ BEGIN
 					pwm_count_reset <= '1';
 					override <= '0';
 					override_cont_new_state <= read_sensor_and_listen;
-		
+					translator_out_reset <= '1';
 					new_station_state <= first;
 			END CASE;
 
 		WHEN forward_station => -- VOORBEELD VOOR FORWARD_STATION COMMANDO.
-			new_prev_operation_state <= station;
 			distance_count_reset <= '0';
 			pwm_count_reset <= '0';
 			override_vector <= "1000"; -- moet iets zijn
-		
+			translator_out_reset <= '0';
 			override_cont_new_state <= forward_station;
 			CASE station_state IS
 				WHEN first => -- Lijnvolgen
@@ -353,22 +320,22 @@ BEGIN
 					pwm_count_reset <= '1';
 					override <= '0';
 					override_cont_new_state <= read_sensor_and_listen;
-		
+					translator_out_reset <= '1';
 					new_station_state <= first;
 				WHEN OTHERS => -- zelfde als Third
 					distance_count_reset <= '0';
 					pwm_count_reset <= '1';
 					override <= '0';
 					override_cont_new_state <= read_sensor_and_listen;
-		
+					translator_out_reset <= '1';
 					new_station_state <= first;
 			END CASE;
 
 		WHEN right_station =>
-			new_prev_operation_state <= station;
 			distance_count_reset <= '0';
 			pwm_count_reset <= '0';
 			override_vector <= "1000"; -- moet iets zijn
+			translator_out_reset <= '0';
 			override_cont_new_state <= right_station;
 			CASE station_state IS
 				WHEN first => -- Gewoon de bocht naar rechts (gekopierd)
@@ -377,7 +344,7 @@ BEGIN
 					override <= '1';
 					override_vector <= "0100"; -- harde bocht naar links
 					override_cont_new_state <= right_station;
-			
+					translator_out_reset <= '0';
 					IF (unsigned(pwm_count_out) < RIGHT_PWM_COUNT) THEN
 						new_station_state <= first;
 					ELSE
@@ -389,7 +356,7 @@ BEGIN
 					override <= '1';
 					override_vector <= "0001"; -- Vooruit
 					override_cont_new_state <= right_station;
-			
+					translator_out_reset <= '0';
 					IF (sensor_l = '0' AND sensor_m = '0') THEN
 						new_station_state <= THIRD;
 					ELSE
@@ -416,39 +383,9 @@ BEGIN
 					pwm_count_reset <= '1';
 					override <= '0';
 					override_cont_new_state <= read_sensor_and_listen;
-
+					translator_out_reset <= '1';
 					new_station_state <= first;
 			END CASE;
-			
-		WHEN mine =>
-			new_prev_operation_state <= station;
-			distance_count_reset <= '0';
-			pwm_count_reset <= '0';
-			override_vector <= "1000"; -- moet iets zijn
-			override_cont_new_state <= mine;
-			CASE station_state IS
-				WHEN first =>
-					override <= '1';
-					override_vector <= "0111"; -- drive_motor_left90.
-					IF (sensor_r = '1') THEN
-						new_station_state <= first;
-					ELSE
-						new_station_state <= fifth;
-					END IF;
-			
-					
-				
-				WHEN second => --Bocht maken als hij aan het einde van de lijn is. Dan geldt: sensor_l ='1' (wit). Dan 180 graden LINKSOM draaien. De linker sensor zal als laatste weer zwart worden. Dan verder naar de volgende stap.
-					
-				WHEN fifth => -- De robot is klaar om weer lijn te volgen, hij verlaat de override stand.
-					distance_count_reset <= '0'; -- In het geval dat de robot een station bezocht heeft hoeft hij niet de distance counter te resetten, omdat hij geen zwarte stip meer tegen zal komen.
-					pwm_count_reset <= '1';
-					override <= '0';
-					override_cont_new_state <= read_sensor_and_listen;
-
-					new_station_state <= first;
-			
-			
 			
 
 		WHEN OTHERS =>
@@ -457,7 +394,7 @@ BEGIN
 			override <= '0';
 			override_vector <= "0000";-- moet iets zijn
 			override_cont_new_state <= read_sensor_and_listen;
-
+			translator_out_reset <= '0';
 	END CASE;
 END PROCESS;
 
@@ -498,93 +435,37 @@ END PROCESS;
 
 
 -- tx signalen. Zal versturen op het kruisen van de stip tussen de kruispunten, of bij het verschijnen in een *_station staat
-PROCESS (clk, sensor_l, sensor_r, sensor_m, distance_count, distance_count_reset, override_cont_state, tx_state_reg, prev_operation_state)
+PROCESS (clk, sensor_l, sensor_r, sensor_m, distance_count, distance_count_reset)
 BEGIN
 	tx_state_next <= tx_state_reg;
 	tx_out <= TX_GEEN_MIJN;
 	CASE(tx_state_reg) IS
 		WHEN tx_idle => -- Wachten wachten wachten wachten....
 			tx_send_out <= '0';
-			IF ( override_cont_state /= read_sensor_and_listen) THEN
+			IF (override_cont_state = forward_station OR override_cont_state = right_station OR override_cont_state = left_station) THEN
+				tx_state_next <= tx_send;
+			ELSIF (distance_count = OPERATION_DISTANCE - RELATIVE_SEND) THEN
 				tx_state_next <= tx_send;
 			END IF;
 		WHEN tx_send => -- stuur 1 klokpuls
 			tx_send_out <= '1';
-			tx_state_next <= tx_wait_normal;
-
-		WHEN tx_wait_station => -- WORDT NU NIET GEBRUIKT
+			IF ((override_cont_state = forward_station OR override_cont_state = right_station OR override_cont_state = left_station)) THEN
+				tx_state_next <= tx_wait_station;
+			ELSE
+				tx_state_next <= tx_wait_normal;
+			END IF;
+		WHEN tx_wait_station => -- Forceer hem om maar 1 keer te sturen bij station-staten
 			tx_send_out <= '0';
 			IF (NOT(override_cont_state = forward_station OR override_cont_state = right_station OR override_cont_state = left_station)) THEN
 			tx_state_next <= tx_idle;
-		end if;
-		
+			end if;
 		WHEN tx_wait_normal => -- Forceer hem om maar een keer te sturen bij normale states. Aan het einde van een handeling wordt distance_count gereset
 			tx_send_out <= '0';
-			IF(override_cont_state = read_sensor_and_listen) then 
+			IF(distance_count_reset = '1') then
 				tx_state_next <= tx_idle;
 			END IF;
 	END CASE;
 END PROCESS;
 
 
---Segmentendisplay aansturen
-
-process(station_state_sseg, override_state_sseg, distance_count)
-begin
-sseg(7) <= '0'; --decimale punt uit
-IF(count_in(15) = '0') THEN
-	an <= "1110";
-	sseg <= override_state_sseg;
-ELSE
-	sseg <= station_state_sseg;
-	an <= "0111";
-END IF;
-END PROCESS; 
-
-	with translator_out select
-      override_state_sseg(7 downto 0) <=
-         "01000000" when "00000000", --0 leeg
-         "01111001" when "10000001", --1 vooruit
-         "00100100" when "10000100", --2 links
-         "00110000" when "10000010", --3 rechts
-         "00011001" when "11000001", --4 voorruit station
-         "00010010" when "11000100", --5 links station
-         "00000010" when "11000010", --6 rechts station
-         "01111000" when "10000000", --7 stop
-         "00001110" when others; --f
-		 
-   	with station_state select
-		station_state_sseg(7 downto 0) <=
-         "01111001" when first, --1
-         "00100100" when second, --2 
-         "00110000" when third, 	--3 
-         "00011001" when fourth, --4 
-         "00010010" when fifth, 	--5 
-         "00001110" when others; --f 
-
---oud: led <= (OTHERS => '1'); 
-		 
-process(distance_count)
-begin
-IF(distance_count <  18) THEN --18
-	led <= "00000000";
-ELSIF(distance_count < 36) THEN -- 36 operation_distance *2/8
-	led <= "00000001";
-ELSIF(distance_count < 54) THEN -- 54
-	led <= "00000011";
-ELSIF(distance_count < 72) THEN -- 72
-	led <= "00000111";
-ELSIF(distance_count < 90) THEN -- 90
-	led <= "00001111";
-ELSIF(distance_count < 108) THEN --108
-	led <= "00011111";
-ELSIF(distance_count < 126) THEN --126
-	led <= "00111111";	
-ELSIF(distance_count < operation_distance) THEN -- 144
-	led <= "01111111";
-ELSE
-	led <= "11111111";
-END IF;
-
-END PROCESS;
 END ARCHITECTURE behavioural;

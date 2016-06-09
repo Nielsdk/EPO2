@@ -68,7 +68,8 @@ ARCHITECTURE structural OF systeem IS
 		
 		an 					 : OUT STD_LOGIC_VECTOR (3 downto 0); -- Selectie van de led
 		sseg 				 : OUT STD_LOGIC_VECTOR (7 downto 0); -- Getal dat weergegeven moet worden.
-		led : out STD_LOGIC_VECTOR (7 downto 0)
+		led : out STD_LOGIC_VECTOR (7 downto 0);
+		count_in       : in std_logic_vector (19 downto 0)
 	);
 	END COMPONENT override_controller;
 	COMPONENT uart IS
@@ -81,6 +82,7 @@ ARCHITECTURE structural OF systeem IS
 			write_data     : IN std_logic; 
 			read_data      : IN std_logic; 
 			receiver_flag  : OUT std_logic
+
 		);
 	END COMPONENT uart;
 	COMPONENT rx_translator IS
@@ -268,7 +270,8 @@ BEGIN
 	tx_send_out => TL_uart_write,
 	an => TL_an,
 	sseg => TL_sseg,
-	led => TL_led
+	led => TL_led,
+	count_in => TL_count
 	);
 	
 END ARCHITECTURE structural;

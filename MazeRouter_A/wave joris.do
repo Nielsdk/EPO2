@@ -16,6 +16,9 @@ add wave -noupdate -radix decimal /tb/C00/C07/pwm_count
 add wave -noupdate -radix decimal /tb/C00/C07/distance_count
 add wave -noupdate /tb/C00/C01/state
 add wave -noupdate -radix binary -childformat {{/tb/C00/C01/sensor(2) -radix binary} {/tb/C00/C01/sensor(1) -radix binary} {/tb/C00/C01/sensor(0) -radix binary}} -subitemconfig {/tb/C00/C01/sensor(2) {-height 15 -radix binary} /tb/C00/C01/sensor(1) {-height 15 -radix binary} /tb/C00/C01/sensor(0) {-height 15 -radix binary}} /tb/C00/C01/sensor
+add wave -noupdate /tb/sseg
+add wave -noupdate /tb/led
+add wave -noupdate /tb/an
 TreeUpdate [SetDefaultTree]
 WaveRestoreCursors {{Cursor 1} {45000080 ns} 0}
 quietly wave cursor active 1
