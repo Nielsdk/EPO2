@@ -21,6 +21,21 @@ ENTITY systeem IS
 END ENTITY systeem;
 
 ARCHITECTURE structural OF systeem IS
+	component mijn_inputbuffer is
+	port (	clk				: in	std_logic;
+			reset			: in	std_logic;
+			sensor_in		: in	std_logic;
+			sensor_out	: out	std_logic
+	);
+	end component mijn_inputbuffer;
+	COMPONENT sensor IS
+	port ( sensor_in : in std_logic;
+		count_reset : in std_logic;
+            clk : in std_logic;
+            sensor_out : out std_logic
+          );
+	END component sensor;
+
 	COMPONENT timebase IS
 		PORT (
 			clk          : IN std_logic;
@@ -167,9 +182,25 @@ ARCHITECTURE structural OF systeem IS
 	SIGNAL NULL_1 : std_logic_vector(7 downto 0);
 	SIGNAL NULL_2 : std_logic;	
 	--signalen uit override_controller
+	--signalen voor mijnen
+	SIGNAL TL_mijn_buffer : std_logic;
+	SIGNAL TL_mijn : std_logic;
 --	SIGNAL TL_sseg : std_logic_vector(7 downto 0);
 --	SIGNAL TL_an   : std_logic_vector(3 downto 0);
 BEGIN
+	c99: mijn_inputbuffer
+	PORT MAP(
+	CLK => TL_clk,
+	reset => tl_reset,
+	sensor_in => TL_Mine_button,
+	sensor_out => TL_mijn_buffer);
+	c98: sensor
+	port map(
+	clk => tl_clk,
+	count_reset => tl_reset,
+	sensor_in => TL_mine_button,
+	sensor_out => TL_mijn
+	);
 	C00 : inputbuffer
 	PORT MAP(
 	clk => TL_clk, 
@@ -272,7 +303,7 @@ BEGIN
 	an => TL_an,
 	sseg => TL_sseg,
 	led => TL_led,
-	mine_button => TL_mine_button,
+	mine_button => TL_mijn,
 	count_in => TL_count
 	);
 	
