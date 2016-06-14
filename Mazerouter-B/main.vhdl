@@ -15,7 +15,8 @@ ENTITY systeem IS
 		TL_motor_r   : OUT std_logic;
 		TL_an 		 : OUT STD_LOGIC_VECTOR (3 downto 0); -- Selectie van de led
 		TL_sseg 	 : OUT STD_LOGIC_VECTOR (7 downto 0); -- Getal dat weergegeven moet worden.
-		TL_led : out STD_LOGIC_VECTOR (7 downto 0)
+		TL_led : out STD_LOGIC_VECTOR (7 downto 0);
+		TL_mine_button : IN std_logic
 	);
 END ENTITY systeem;
 
@@ -68,7 +69,9 @@ ARCHITECTURE structural OF systeem IS
 		
 		an 					 : OUT STD_LOGIC_VECTOR (3 downto 0); -- Selectie van de led
 		sseg 				 : OUT STD_LOGIC_VECTOR (7 downto 0); -- Getal dat weergegeven moet worden.
-		led : out STD_LOGIC_VECTOR (7 downto 0)
+		led : out STD_LOGIC_VECTOR (7 downto 0);
+		count_in : in std_logic_vector(19 downto 0);
+		mine_button    : IN std_logic -- Tijdelijke mine knop 
 	);
 	END COMPONENT override_controller;
 	COMPONENT uart IS
@@ -268,7 +271,9 @@ BEGIN
 	tx_send_out => TL_uart_write,
 	an => TL_an,
 	sseg => TL_sseg,
-	led => TL_led
+	led => TL_led,
+	mine_button => TL_mine_button,
+	count_in => TL_count
 	);
 	
 END ARCHITECTURE structural;

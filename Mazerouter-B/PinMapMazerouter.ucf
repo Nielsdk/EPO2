@@ -13,7 +13,7 @@ NET "TL_reset" LOC = P11;
 # buttons & switches 
 #========================================================
 # 4 push buttons 
-#NET "write_data"   LOC = "G12";  #btn<0>
+NET "TL_mine_button"   LOC = "G12";  #btn<0>
 
 #NET "sw<0>" LOC = "P11";  # Bank = 2, Signal name = SW0
 

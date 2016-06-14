@@ -167,13 +167,13 @@ begin
 
 			new_state <= drive_motor_right90;
 
-		when drive_motor_backward => 
-			motor_r_speed <= '1';
-			motor_l_speed <= '1';
+		when drive_motor_backward => --als slow
+			motor_r_speed <= '0';
+			motor_l_speed <= '0';
 			motor_r_reset <= '0';
 			motor_l_reset <= '0';
-			motor_l_direction <= '0';
-			motor_r_direction <= '1';
+			motor_l_direction <= '1';
+			motor_r_direction <= '0';
 			
 		when stop_motor =>
 			motor_r_speed <= '0'; 
