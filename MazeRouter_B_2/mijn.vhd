@@ -34,7 +34,7 @@ end process;
 
 process (count)
     begin
-    if (count > 4391 ) then
+    if (count > 4300 ) then --4391
         sensor_out <= '1';
     else
         sensor_out <= '0';

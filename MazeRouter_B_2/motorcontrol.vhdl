@@ -59,7 +59,7 @@ new_state <= state;
 			if (direction = '0') then
 				if (speed = '1') then
 				
-					if (unsigned(count_in) < 50000) then -- fast: 1100001101010000 slow: 1110101001100000
+					if (unsigned(count_in) < 45000) then -- fast: 1100001101010000 slow: 1110101001100000
 						new_state <= pwm_high;
 					else
 						new_state <= pwm_low;
@@ -77,7 +77,7 @@ new_state <= state;
 				
 			else
 				if (speed = '1') then
-					if(unsigned(count_in) < 100000) then --  fast 11000011010100000 slow: 10100110000001000
+					if(unsigned(count_in) < 105000) then --  fast 11000011010100000 slow: 10100110000001000
 						new_state <= pwm_high;
 					else
 						new_state <= pwm_low;

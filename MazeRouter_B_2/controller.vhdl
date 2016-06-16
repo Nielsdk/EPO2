@@ -109,7 +109,7 @@ begin
 			motor_l_direction <= '1';
 			motor_r_speed <= '0';
 			motor_l_speed <= '1';
-			motor_r_reset <= '0';
+			motor_r_reset <= '1';
 			motor_l_reset <= '0';
 
 			new_state <= drive_motor_right;
@@ -130,7 +130,7 @@ begin
 			motor_r_speed <= '1';
 			motor_l_speed <= '0';
 			motor_r_reset <= '0';
-			motor_l_reset <= '0';
+			motor_l_reset <= '1';
 
 			new_state <= drive_motor_left;
 
